@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card, TextArea, SaveIndicator, Button, ProgressBar } from "@/components/ui";
 import { BRIEF_QUESTIONS, BRIEF_TOTAL_WORD_LIMIT, type InnovationBrief } from "@/types/brief";
 import type { SaveStatus } from "@/types/log";
@@ -9,11 +10,13 @@ import { updateBrief } from "@/lib/briefApi";
 import { debounceSave, isOverWordLimit, wordCount } from "@/utils/completion";
 import { isRichTextEmpty } from "@/utils/richText";
 
-export function InnovationBriefForm({ brief, teamName, projectName, canEdit, onUpdated, backHref, backLabel }: {
+export function InnovationBriefForm({ brief, teamName, projectName, canEdit, onUpdated, backHref, backLabel, saveRedirectHref = "/dashboard" }: {
   brief: InnovationBrief; teamName: string; projectName: string;
   canEdit: boolean; onUpdated: (b: InnovationBrief) => void;
   backHref?: string; backLabel?: string;
+  saveRedirectHref?: string;
 }) {
+  const router = useRouter();
   const [data, setData] = useState(brief);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
 
@@ -26,8 +29,8 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, onU
     BRIEF_QUESTIONS.some((q) => isOverWordLimit(String(data[q.id] || ""), q.maxWords)) ||
     totalWords > BRIEF_TOTAL_WORD_LIMIT;
 
-  const save = useCallback(async () => {
-    if (hasErrors || !canEdit) return;
+  const save = useCallback(async (redirectAfter = false) => {
+    if (hasErrors || !canEdit) return false;
     setSaveStatus("saving");
     try {
       const payload: Record<string, string> = {};
@@ -40,10 +43,18 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, onU
         updated_at: updated.updated_at,
       }));
       onUpdated({ ...updated, ...Object.fromEntries(BRIEF_QUESTIONS.map((q) => [q.id, data[q.id]])) });
+      if (redirectAfter) {
+        router.push(saveRedirectHref);
+        return true;
+      }
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 2000);
-    } catch { setSaveStatus("failed"); }
-  }, [data, brief.team, hasErrors, canEdit, onUpdated]);
+      return true;
+    } catch {
+      setSaveStatus("failed");
+      return false;
+    }
+  }, [data, brief.team, hasErrors, canEdit, onUpdated, router, saveRedirectHref]);
 
   const debouncedSave = useMemo(() => debounceSave(save, 1500), [save]);
 
@@ -112,7 +123,11 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, onU
           );
         })}
       </div>
-      {canEdit && <Button className="mt-6" onClick={save} disabled={hasErrors}>Save Brief</Button>}
+      {canEdit && (
+        <Button className="mt-6" onClick={() => save(true)} disabled={hasErrors}>
+          Save Brief
+        </Button>
+      )}
     </div>
   );
 }

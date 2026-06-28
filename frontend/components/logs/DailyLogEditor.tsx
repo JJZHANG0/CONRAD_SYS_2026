@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Card, TextArea, SaveIndicator, Button, StatusBadge } from "@/components/ui";
 import { LOG_FIELDS, type DailyLog, type SaveStatus } from "@/types/log";
@@ -18,6 +19,7 @@ interface Props {
   backLabel?: string;
   pageTitle?: string;
   pageSubtitle?: string;
+  saveRedirectHref?: string;
 }
 
 export function DailyLogEditor({
@@ -29,7 +31,9 @@ export function DailyLogEditor({
   backLabel,
   pageTitle,
   pageSubtitle,
+  saveRedirectHref = "/dashboard",
 }: Props) {
+  const router = useRouter();
   const [day, setDay] = useState(initialDay);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const log = logs.find((l) => l.day === day) || logs[0];
@@ -59,8 +63,8 @@ export function DailyLogEditor({
     [fields]
   );
 
-  const save = useCallback(async () => {
-    if (!log || hasErrors) return;
+  const save = useCallback(async (redirectAfter = false) => {
+    if (!log || hasErrors) return false;
     setSaveStatus("saving");
     try {
       const payload =
@@ -74,12 +78,18 @@ export function DailyLogEditor({
           : { teacher_comment: fields.teacher_comment };
       const updated = await updateLog(log.id, payload);
       onUpdated(updated);
+      if (redirectAfter) {
+        router.push(saveRedirectHref);
+        return true;
+      }
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 2000);
+      return true;
     } catch {
       setSaveStatus("failed");
+      return false;
     }
-  }, [log, fields, mode, hasErrors, onUpdated]);
+  }, [log, fields, mode, hasErrors, onUpdated, router, saveRedirectHref]);
 
   const debouncedSave = useMemo(() => debounceSave(save, 1500), [save]);
 
@@ -228,7 +238,7 @@ export function DailyLogEditor({
 
             {mode === "student" && (
               <div className="flex justify-end pt-1">
-                <Button onClick={save} disabled={hasErrors}>
+                <Button onClick={() => save(true)} disabled={hasErrors}>
                   Save Log
                 </Button>
               </div>
@@ -268,7 +278,7 @@ export function DailyLogEditor({
               />
               {mode === "teacher" && (
                 <div className="mt-4 flex items-center justify-between">
-                  <Button onClick={save}>Save Comment</Button>
+                  <Button onClick={() => save(true)}>Save Comment</Button>
                   {log.teacher_comment_updated_at && (
                     <p className="text-xs text-text-secondary">
                       Last updated:{" "}
