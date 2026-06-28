@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# Environment
+.env
+.env.local
+.env*.local
+
+# Debug
+npm-debug.log*
+*.tsbuildinfo
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/

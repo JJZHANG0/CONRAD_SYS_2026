@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-surface-muted text-text-primary antialiased;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
+}
+
+.card-shadow {
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.card-hover {
+  @apply transition-all duration-200;
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+}
+
+.input-field {
+  @apply w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-text-primary placeholder:text-text-secondary/60 transition-colors;
+}
+.input-field:focus {
+  @apply outline-none border-primary ring-2 ring-primary/20;
+}
+
+.border-top-blue { border-top: 3px solid #2563EB; }
+.border-top-purple { border-top: 3px solid #7C3AED; }
+.border-top-yellow { border-top: 3px solid #FACC15; }
+
+/* Rich text editor & rendered content */
+.rich-editor:empty::before,
+.rich-editor[data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: rgba(100, 116, 139, 0.6);
+  pointer-events: none;
+}
+
+.rich-editor ul,
+.rich-content ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.rich-editor ol,
+.rich-content ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.rich-editor li,
+.rich-content li {
+  margin: 0.25rem 0;
+}
+
+.rich-editor strong,
+.rich-content strong {
+  font-weight: 600;
+}
+
+.rich-editor em,
+.rich-content em {
+  font-style: italic;
+}
+
+.rich-editor p,
+.rich-content p {
+  margin: 0.25rem 0;
+}
+
+.rich-editor:focus {
+  outline: none;
+}
+

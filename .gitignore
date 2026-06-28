@@ -1,0 +1,31 @@
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Backend
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.py[cod]
+backend/db.sqlite3
+backend/media/
+backend/staticfiles/
+backend/.env
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env*.local
+frontend/npm-debug.log*
+frontend/*.tsbuildinfo
+
+# Secrets
+.env
+.env.local
+*.pem

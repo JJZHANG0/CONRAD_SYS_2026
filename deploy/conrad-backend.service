@@ -1,0 +1,15 @@
+[Unit]
+Description=Conrad System Django Backend
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/conrad_sys/backend
+EnvironmentFile=/opt/conrad_sys/backend/.env
+ExecStart=/opt/conrad_sys/backend/venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 2 --timeout 120
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

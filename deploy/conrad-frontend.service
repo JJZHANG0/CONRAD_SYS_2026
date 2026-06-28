@@ -1,0 +1,16 @@
+[Unit]
+Description=Conrad System Next.js Frontend
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/conrad_sys/frontend
+Environment=NODE_ENV=production
+EnvironmentFile=/opt/conrad_sys/frontend/.env.production
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
