@@ -51,6 +51,10 @@ function ToolbarBtn({
   );
 }
 
+function htmlEquivalent(a: string, b: string): boolean {
+  return normalizeRichText(a) === normalizeRichText(b);
+}
+
 export function RichTextEditor({
   labelEn = "",
   labelZh = "",
@@ -64,6 +68,8 @@ export function RichTextEditor({
   large = false,
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const isFocusedRef = useRef(false);
+  const lastSyncedValueRef = useRef(value);
   const [colorOpen, setColorOpen] = useState(false);
   const useWords = maxWords != null;
   const current = useWords ? countWords(value) : getPlainTextLength(value);
@@ -71,18 +77,25 @@ export function RichTextEditor({
   const over = limit > 0 && current > limit;
   const showLabel = labelEn || labelZh;
 
+  // Only push external value into DOM when not actively typing (day switch, load, etc.)
   useEffect(() => {
     const el = editorRef.current;
-    if (!el || disabled) return;
-    if (el.innerHTML !== value) {
-      el.innerHTML = value || "";
+    if (!el || disabled || isFocusedRef.current) return;
+    if (htmlEquivalent(el.innerHTML, value)) {
+      lastSyncedValueRef.current = value;
+      return;
     }
+    el.innerHTML = value || "";
+    lastSyncedValueRef.current = value;
   }, [value, disabled]);
 
   const emitChange = useCallback(() => {
     const el = editorRef.current;
     if (!el) return;
-    onChange(normalizeRichText(el.innerHTML));
+    const html = el.innerHTML;
+    if (htmlEquivalent(html, lastSyncedValueRef.current)) return;
+    lastSyncedValueRef.current = html;
+    onChange(html);
   }, [onChange]);
 
   const exec = (cmd: string, val?: string) => {
@@ -134,7 +147,6 @@ export function RichTextEditor({
           over || error ? "border-red-400" : "border-border focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20"
         )}
       >
-        {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-0.5 border-b border-border bg-gray-50/80 px-2 py-1.5">
           <ToolbarBtn title="Bold 加粗" onClick={() => exec("bold")}>
             <span className="font-bold">B</span>
@@ -183,13 +195,25 @@ export function RichTextEditor({
           </ToolbarBtn>
         </div>
 
-        {/* Editor */}
         <div
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning
+          onFocus={() => {
+            isFocusedRef.current = true;
+          }}
+          onBlur={() => {
+            isFocusedRef.current = false;
+            const el = editorRef.current;
+            if (!el) return;
+            const normalized = normalizeRichText(el.innerHTML);
+            if (normalized !== el.innerHTML) {
+              el.innerHTML = normalized;
+            }
+            lastSyncedValueRef.current = normalized;
+            onChange(normalized);
+          }}
           onInput={emitChange}
-          onBlur={emitChange}
           data-placeholder="Start typing here…"
           className={clsx(
             "rich-editor px-4 py-4 text-[15px] leading-relaxed text-text-primary outline-none",
@@ -208,7 +232,6 @@ export function RichTextEditor({
   );
 }
 
-/** Drop-in replacement for plain TextArea — now with rich text */
 export function TextArea(props: RichTextEditorProps) {
   return <RichTextEditor {...props} />;
 }

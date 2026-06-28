@@ -33,8 +33,13 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, onU
       const payload: Record<string, string> = {};
       BRIEF_QUESTIONS.forEach((q) => { payload[q.id] = String(data[q.id] || ""); });
       const updated = await updateBrief(brief.team, payload as Partial<InnovationBrief>);
-      setData(updated);
-      onUpdated(updated);
+      setData((prev) => ({
+        ...prev,
+        completion_count: updated.completion_count,
+        completion_rate: updated.completion_rate,
+        updated_at: updated.updated_at,
+      }));
+      onUpdated({ ...updated, ...Object.fromEntries(BRIEF_QUESTIONS.map((q) => [q.id, data[q.id]])) });
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 2000);
     } catch { setSaveStatus("failed"); }

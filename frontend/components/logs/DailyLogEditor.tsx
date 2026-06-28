@@ -204,6 +204,7 @@ export function DailyLogEditor({
                   <span className="text-xs text-text-secondary">Section {i + 1} of 4</span>
                 </div>
                 <TextArea
+                  key={`${day}-${f.id}`}
                   labelEn={f.labelEn}
                   labelZh={f.labelZh}
                   helper={f.helper}
@@ -246,6 +247,7 @@ export function DailyLogEditor({
                 </p>
               )}
               <TextArea
+                key={`${day}-teacher_comment`}
                 labelEn="Teacher Comment"
                 labelZh="老师评语"
                 value={fields.teacher_comment}
