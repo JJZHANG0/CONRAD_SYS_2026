@@ -102,7 +102,8 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, onU
               <TextArea
                 labelEn="" labelZh="" helper={q.helper}
                 value={val} maxWords={q.maxWords}
-                onChange={(v) => { setData((prev) => ({ ...prev, [q.id]: v })); debouncedSave(); }}
+                onChange={(v) => { setData((prev) => ({ ...prev, [q.id]: v })); }}
+                onBlurSave={() => debouncedSave()}
                 disabled={!canEdit}
                 large
                 error={overSection ? "Word limit exceeded" : undefined}

@@ -85,6 +85,9 @@ export function DailyLogEditor({
 
   const handleField = (key: string, value: string) => {
     setFields((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleFieldBlur = () => {
     debouncedSave();
   };
 
@@ -211,6 +214,7 @@ export function DailyLogEditor({
                   value={fields[f.id]}
                   maxChars={f.maxChars}
                   onChange={(v) => handleField(f.id, v)}
+                  onBlurSave={handleFieldBlur}
                   disabled={mode === "teacher"}
                   large
                   error={
@@ -253,6 +257,7 @@ export function DailyLogEditor({
                 value={fields.teacher_comment}
                 maxChars={800}
                 onChange={(v) => handleField("teacher_comment", v)}
+                onBlurSave={handleFieldBlur}
                 disabled={mode === "student"}
                 large
                 helper={

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { countWords, getPlainTextLength, isRichTextEmpty, normalizeRichText } from "@/utils/richText";
 
@@ -16,6 +16,7 @@ interface RichTextEditorProps {
   labelZh?: string;
   value: string;
   onChange: (v: string) => void;
+  onBlurSave?: () => void;
   maxChars?: number;
   maxWords?: number;
   helper?: string;
@@ -26,12 +27,10 @@ interface RichTextEditorProps {
 
 function ToolbarBtn({
   onClick,
-  active,
   title,
   children,
 }: {
   onClick: () => void;
-  active?: boolean;
   title: string;
   children: React.ReactNode;
 }) {
@@ -43,7 +42,7 @@ function ToolbarBtn({
       onClick={onClick}
       className={clsx(
         "flex h-8 min-w-[2rem] items-center justify-center rounded-lg px-2 text-sm font-medium transition-colors",
-        active ? "bg-primary text-white" : "text-text-secondary hover:bg-gray-100 hover:text-text-primary"
+        "text-text-secondary hover:bg-gray-100 hover:text-text-primary"
       )}
     >
       {children}
@@ -51,15 +50,12 @@ function ToolbarBtn({
   );
 }
 
-function htmlEquivalent(a: string, b: string): boolean {
-  return normalizeRichText(a) === normalizeRichText(b);
-}
-
 export function RichTextEditor({
   labelEn = "",
   labelZh = "",
   value,
   onChange,
+  onBlurSave,
   maxChars,
   maxWords,
   helper,
@@ -68,41 +64,48 @@ export function RichTextEditor({
   large = false,
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
-  const isFocusedRef = useRef(false);
-  const lastSyncedValueRef = useRef(value);
-  const [colorOpen, setColorOpen] = useState(false);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
   const useWords = maxWords != null;
-  const current = useWords ? countWords(value) : getPlainTextLength(value);
+  const [count, setCount] = useState(() =>
+    useWords ? countWords(value) : getPlainTextLength(value)
+  );
   const limit = useWords ? maxWords! : (maxChars ?? 0);
-  const over = limit > 0 && current > limit;
+  const over = limit > 0 && count > limit;
   const showLabel = labelEn || labelZh;
 
-  // Only push external value into DOM when not actively typing (day switch, load, etc.)
-  useEffect(() => {
+  // Uncontrolled: load HTML once per mount (parent uses key= to remount on day switch)
+  useLayoutEffect(() => {
     const el = editorRef.current;
-    if (!el || disabled || isFocusedRef.current) return;
-    if (htmlEquivalent(el.innerHTML, value)) {
-      lastSyncedValueRef.current = value;
-      return;
-    }
+    if (!el || disabled) return;
     el.innerHTML = value || "";
-    lastSyncedValueRef.current = value;
-  }, [value, disabled]);
+    setCount(useWords ? countWords(value) : getPlainTextLength(value));
+    // value intentionally omitted — remount via key when external content changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disabled, useWords]);
 
-  const emitChange = useCallback(() => {
-    const el = editorRef.current;
-    if (!el) return;
-    const html = el.innerHTML;
-    if (htmlEquivalent(html, lastSyncedValueRef.current)) return;
-    lastSyncedValueRef.current = html;
-    onChange(html);
-  }, [onChange]);
+  const notifyChange = useCallback(
+    (normalize = false) => {
+      const el = editorRef.current;
+      if (!el) return;
+      const html = normalize ? normalizeRichText(el.innerHTML) : el.innerHTML;
+      if (normalize && html !== el.innerHTML) {
+        el.innerHTML = html;
+      }
+      setCount(useWords ? countWords(html) : getPlainTextLength(html));
+      onChangeRef.current(html);
+    },
+    [useWords]
+  );
 
   const exec = (cmd: string, val?: string) => {
     editorRef.current?.focus();
     document.execCommand(cmd, false, val);
-    emitChange();
+    notifyChange(false);
   };
+
+  const [colorOpen, setColorOpen] = useState(false);
 
   if (disabled) {
     return (
@@ -143,7 +146,7 @@ export function RichTextEditor({
 
       <div
         className={clsx(
-          "overflow-hidden rounded-xl border bg-white transition-colors",
+          "overflow-hidden rounded-xl border bg-white",
           over || error ? "border-red-400" : "border-border focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20"
         )}
       >
@@ -199,21 +202,11 @@ export function RichTextEditor({
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning
-          onFocus={() => {
-            isFocusedRef.current = true;
-          }}
+          onInput={() => notifyChange(false)}
           onBlur={() => {
-            isFocusedRef.current = false;
-            const el = editorRef.current;
-            if (!el) return;
-            const normalized = normalizeRichText(el.innerHTML);
-            if (normalized !== el.innerHTML) {
-              el.innerHTML = normalized;
-            }
-            lastSyncedValueRef.current = normalized;
-            onChange(normalized);
+            notifyChange(true);
+            onBlurSave?.();
           }}
-          onInput={emitChange}
           data-placeholder="Start typing here…"
           className={clsx(
             "rich-editor px-4 py-4 text-[15px] leading-relaxed text-text-primary outline-none",
@@ -225,7 +218,7 @@ export function RichTextEditor({
       <div className="flex justify-between text-xs">
         {error && <span className="text-red-500">{error}</span>}
         <span className={clsx("ml-auto tabular-nums", over ? "text-red-500" : "text-text-secondary")}>
-          {current}/{limit} {useWords ? "words" : "chars"}
+          {count}/{limit} {useWords ? "words" : "chars"}
         </span>
       </div>
     </div>
