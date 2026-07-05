@@ -81,7 +81,12 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, onU
             </p>
           </div>
           <div className="text-right">
-            <SaveIndicator status={saveStatus} />
+            {!canEdit && (
+              <span className="mb-2 inline-block rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+                只读浏览
+              </span>
+            )}
+            {canEdit && <SaveIndicator status={saveStatus} />}
             <p className="mt-1 text-sm font-medium">{data.completion_count} / 10 completed</p>
             <ProgressBar value={data.completion_count} max={10} />
             <p className={`mt-2 text-xs tabular-nums ${totalWords > BRIEF_TOTAL_WORD_LIMIT ? "text-red-500" : "text-text-secondary"}`}>

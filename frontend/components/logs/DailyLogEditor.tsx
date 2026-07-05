@@ -135,7 +135,7 @@ export function DailyLogEditor({
                 只读浏览
               </span>
             )}
-            <SaveIndicator status={saveStatus} />
+            {isReadOnly ? null : <SaveIndicator status={saveStatus} />}
             <span className="rounded-full bg-primary-light px-3 py-1 text-xs font-medium text-primary">
               {completedCount}/5 logs complete
             </span>
