@@ -20,8 +20,8 @@ def user_can_access_team(user, team):
 
 
 def user_can_review_team(user, team):
-    """View student logs and add teacher comments — team teacher or operations."""
-    return user_is_team_teacher(user, team) or user_is_operations(user)
+    """Write teacher comments — assigned team teacher only (not operations)."""
+    return user_is_team_teacher(user, team)
 
 
 def user_is_team_teacher(user, team):

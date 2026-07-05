@@ -12,7 +12,7 @@ import { isRichTextEmpty } from "@/utils/richText";
 
 interface Props {
   logs: DailyLog[];
-  mode: "student" | "teacher";
+  mode: "student" | "teacher" | "operations";
   onUpdated: (log: DailyLog) => void;
   initialDay?: number;
   backHref?: string;
@@ -37,6 +37,7 @@ export function DailyLogEditor({
   const [day, setDay] = useState(initialDay);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const log = logs.find((l) => l.day === day) || logs[0];
+  const isReadOnly = mode === "operations";
 
   const [fields, setFields] = useState({
     work_content: log?.work_content || "",
@@ -98,7 +99,7 @@ export function DailyLogEditor({
   };
 
   const handleFieldBlur = () => {
-    debouncedSave();
+    if (!isReadOnly) debouncedSave();
   };
 
   if (!log) return null;
@@ -129,6 +130,11 @@ export function DailyLogEditor({
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {isReadOnly && (
+              <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+                只读浏览
+              </span>
+            )}
             <SaveIndicator status={saveStatus} />
             <span className="rounded-full bg-primary-light px-3 py-1 text-xs font-medium text-primary">
               {completedCount}/5 logs complete
@@ -225,7 +231,7 @@ export function DailyLogEditor({
                   maxChars={f.maxChars}
                   onChange={(v) => handleField(f.id, v)}
                   onBlurSave={handleFieldBlur}
-                  disabled={mode === "teacher"}
+                  disabled={mode === "teacher" || isReadOnly}
                   large
                   error={
                     isOverLimit(fields[f.id], f.maxChars)
@@ -268,12 +274,14 @@ export function DailyLogEditor({
                 maxChars={800}
                 onChange={(v) => handleField("teacher_comment", v)}
                 onBlurSave={handleFieldBlur}
-                disabled={mode === "student"}
+                disabled={mode === "student" || isReadOnly}
                 large
                 helper={
                   mode === "teacher"
                     ? "Provide constructive feedback on the student's work for this day."
-                    : undefined
+                    : isReadOnly
+                      ? "Operations view only — editing disabled."
+                      : undefined
                 }
               />
               {mode === "teacher" && (

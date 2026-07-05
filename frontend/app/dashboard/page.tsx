@@ -53,7 +53,7 @@ function DashboardContent() {
   }
 
   if (data.role === "operations") {
-    return <OperationsDashboardView data={data} />;
+    return <OperationsDashboardView data={data} onRefresh={load} />;
   }
 
   return (

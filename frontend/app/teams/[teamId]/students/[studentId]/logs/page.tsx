@@ -8,6 +8,7 @@ import { LoadingState, Button } from "@/components/ui";
 import { fetchStudentLogs } from "@/lib/logApi";
 import { fetchTeam } from "@/lib/teamApi";
 import { getErrorMessage } from "@/lib/apiClient";
+import { useAuthStore } from "@/store/authStore";
 import type { DailyLog } from "@/types/log";
 
 export default function StudentLogsPage() {
@@ -22,6 +23,7 @@ export default function StudentLogsPage() {
 
 function StudentLogsContent() {
   const { teamId, studentId } = useParams();
+  const { user } = useAuthStore();
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [studentName, setStudentName] = useState("");
   const [teamName, setTeamName] = useState("");
@@ -61,15 +63,21 @@ function StudentLogsContent() {
     );
   }
 
+  const logMode = user?.role === "operations" ? "operations" : "teacher";
+
   return (
     <DailyLogEditor
       logs={logs}
-      mode="teacher"
+      mode={logMode}
       onUpdated={handleUpdated}
       backHref={`/teams/${teamId}`}
       backLabel="Back to Team"
       pageTitle={`${studentName}'s Daily Logs`}
-      pageSubtitle={`${teamName} · Review and add teacher comments · 查看日志并填写评语`}
+      pageSubtitle={
+        logMode === "operations"
+          ? `${teamName} · 只读浏览 · View only`
+          : `${teamName} · Review and add teacher comments · 查看日志并填写评语`
+      }
     />
   );
 }

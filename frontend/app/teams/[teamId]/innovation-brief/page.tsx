@@ -65,7 +65,7 @@ function BriefContent() {
     );
   }
 
-  const canEdit = user?.role === "teacher" || user?.role === "student" || user?.role === "operations";
+  const canEdit = user?.role === "teacher" || user?.role === "student";
 
   return (
     <InnovationBriefForm

@@ -2,8 +2,14 @@
 
 import Link from "next/link";
 import { Card, Button, StatusBadge, ProgressBar } from "@/components/ui";
+import { OperationsManagementPanel } from "@/components/operations/OperationsManagementPanel";
 import type { DailyLog } from "@/types/log";
-import type { StudentDashboard, TeacherDashboard } from "@/types/team";
+import type { StudentDashboard, TeacherDashboard, OperationsDashboard } from "@/types/team";
+
+interface OperationsDashboardProps {
+  data: OperationsDashboard;
+  onRefresh?: () => void;
+}
 
 export function DayLogCard({ log }: { log: DailyLog }) {
   const status = log.is_complete ? "complete" : "incomplete";
@@ -82,13 +88,15 @@ export function TeamCard({ team }: { team: TeacherDashboard["teams"][0] }) {
   );
 }
 
-export function OperationsDashboardView({ data }: { data: import("@/types/team").OperationsDashboard }) {
+export function OperationsDashboardView({ data, onRefresh }: OperationsDashboardProps) {
   return (
     <div>
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold text-text-primary">Operations Dashboard</h1>
-        <p className="mt-1 text-text-secondary">All teams · {data.teams.length} total</p>
+        <p className="mt-1 text-text-secondary">All teams · {data.teams.length} total · 只读浏览 Log / Brief</p>
       </div>
+
+      {onRefresh && <OperationsManagementPanel teams={data.teams} onChanged={onRefresh} />}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {data.teams.map((t) => (
           <Link key={t.id} href={`/teams/${t.id}`} className="block">
