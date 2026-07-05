@@ -38,24 +38,24 @@ export default function LoginPage() {
         <Card>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium">Username</label>
+              <label className="mb-1 block text-sm font-medium">姓名 / Name</label>
               <input
                 className="input-field"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
+                placeholder="请输入中文姓名"
                 autoComplete="username"
                 required
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Password</label>
+              <label className="mb-1 block text-sm font-medium">密码 / Password</label>
               <input
                 type="password"
                 className="input-field"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                placeholder="请输入密码"
                 autoComplete="current-password"
                 required
               />
