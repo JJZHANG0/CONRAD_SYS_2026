@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, Button } from "@/components/ui";
+import { TeamPicker } from "@/components/operations/TeamPicker";
 import {
   createOpsStudent,
   createOpsTeam,
@@ -191,16 +192,9 @@ export function OperationsManagementPanel({ teams, onChanged }: Props) {
             <label className="mb-1 block text-xs font-medium">学生姓名 *</label>
             <input className="input-field" value={sName} onChange={(e) => setSName(e.target.value)} placeholder="中文姓名" required />
           </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium">绑定队伍 *</label>
-            <select className="input-field" value={sTeamId} onChange={(e) => setSTeamId(e.target.value)} required>
-              <option value="">选择队伍</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id} disabled={t.member_count >= 5}>
-                  {t.name} ({t.member_count}/5)
-                </option>
-              ))}
-            </select>
+          <div className="sm:col-span-2">
+            <label className="mb-1.5 block text-xs font-medium text-text-primary">绑定队伍 *</label>
+            <TeamPicker teams={teams} value={sTeamId} onChange={setSTeamId} placeholder="点击选择要绑定的队伍" />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium">学校</label>
