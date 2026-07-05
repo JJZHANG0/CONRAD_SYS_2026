@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AuthGuard, AppShell } from "@/components/layout/AppShell";
-import { StudentDashboardView, TeacherDashboardView, DayLogCard } from "@/components/dashboard";
+import { StudentDashboardView, TeacherDashboardView, OperationsDashboardView, DayLogCard } from "@/components/dashboard";
 import { LoadingState, Button } from "@/components/ui";
 import { fetchDashboard } from "@/lib/dashboardApi";
 import { fetchMyLogs } from "@/lib/logApi";
@@ -50,6 +50,10 @@ function DashboardContent() {
 
   if (data.role === "teacher") {
     return <TeacherDashboardView data={data} />;
+  }
+
+  if (data.role === "operations") {
+    return <OperationsDashboardView data={data} />;
   }
 
   return (

@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.teams.models import Team
-from apps.teams.permissions import user_can_access_team, user_is_team_member, user_is_team_teacher
+from apps.teams.permissions import user_can_access_team, user_can_review_team, user_is_team_member, user_is_team_teacher
 
 from .models import InnovationBrief
 from .serializers import InnovationBriefSerializer
@@ -34,7 +34,7 @@ class InnovationBriefView(APIView):
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
 
         user = request.user
-        can_edit = user_is_team_teacher(user, team) or (
+        can_edit = user_can_review_team(user, team) or (
             STUDENTS_CAN_EDIT_BRIEF and user_is_team_member(user, team)
         )
         if not can_edit:

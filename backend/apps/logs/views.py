@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.teams.models import Team, TeamMember
-from apps.teams.permissions import user_can_access_team, user_is_team_teacher
+from apps.teams.permissions import user_can_access_team, user_can_review_team
 
 from .models import DailyLog
 from .serializers import DailyLogSerializer, StudentLogUpdateSerializer, TeacherCommentUpdateSerializer
@@ -26,7 +26,7 @@ class StudentLogsView(APIView):
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
         if request.user.is_student and request.user.id != student_id:
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
-        if not user_is_team_teacher(request.user, team) and request.user.id != student_id:
+        if not user_can_review_team(request.user, team) and request.user.id != student_id:
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
 
         logs = DailyLog.objects.filter(team=team, student_id=student_id).order_by("day")
@@ -44,7 +44,7 @@ class LogUpdateView(APIView):
             serializer.save()
             return Response(DailyLogSerializer(log).data)
 
-        if user.is_teacher and log.team.teacher_id == user.id:
+        if user_can_review_team(user, log.team):
             serializer = TeacherCommentUpdateSerializer(log, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()

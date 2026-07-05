@@ -61,4 +61,9 @@ export interface TeacherDashboard {
   teams: (TeamSummary & TeamStats)[];
 }
 
-export type DashboardData = StudentDashboard | TeacherDashboard;
+export interface OperationsDashboard {
+  role: "operations";
+  teams: (TeamSummary & TeamStats & { teacher_name?: string })[];
+}
+
+export type DashboardData = StudentDashboard | TeacherDashboard | OperationsDashboard;

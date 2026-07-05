@@ -22,6 +22,8 @@ class TeamListView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
+        if user.is_operations:
+            return Team.objects.all().prefetch_related("members")
         if user.is_teacher:
             return Team.objects.filter(teacher=user).prefetch_related("members")
         membership = TeamMember.objects.filter(student=user).select_related("team").first()
@@ -47,6 +49,21 @@ class TeamDetailView(generics.RetrieveAPIView):
 class DashboardView(APIView):
     def get(self, request):
         user = request.user
+        if user.is_operations:
+            teams = Team.objects.all().prefetch_related("members")
+            team_data = []
+            for team in teams:
+                stats = {**team_log_stats(team), **brief_stats(team)}
+                team_data.append({
+                    "id": team.id,
+                    "name": team.name,
+                    "project_name": team.project_name,
+                    "challenge_category": team.challenge_category,
+                    "teacher_name": team.teacher.display_name,
+                    **stats,
+                })
+            return Response({"role": "operations", "teams": team_data})
+
         if user.is_teacher:
             teams = Team.objects.filter(teacher=user).prefetch_related("members")
             team_data = []

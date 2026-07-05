@@ -82,6 +82,40 @@ export function TeamCard({ team }: { team: TeacherDashboard["teams"][0] }) {
   );
 }
 
+export function OperationsDashboardView({ data }: { data: import("@/types/team").OperationsDashboard }) {
+  return (
+    <div>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-text-primary">Operations Dashboard</h1>
+        <p className="mt-1 text-text-secondary">All teams · {data.teams.length} total</p>
+      </div>
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {data.teams.map((t) => (
+          <Link key={t.id} href={`/teams/${t.id}`} className="block">
+            <Card hover borderTop="purple">
+              <div className="mb-1 inline-block rounded-full bg-purple-50 px-2 py-0.5 text-xs text-accent-purple">{t.challenge_category}</div>
+              <h3 className="text-lg font-semibold text-text-primary">{t.name}</h3>
+              <p className="text-sm text-text-secondary">{t.project_name}</p>
+              {t.teacher_name && (
+                <p className="mt-1 text-xs text-text-secondary">Teacher: {t.teacher_name}</p>
+              )}
+              <div className="mt-4 space-y-2">
+                <ProgressBar value={t.member_count} max={5} label="Members" />
+                <ProgressBar value={t.log_completion_count} max={t.total_log_count || 1} label="Student Logs" />
+                <ProgressBar value={t.teacher_comment_count} max={t.total_log_count || 1} label="Teacher Comments" />
+                <ProgressBar value={t.innovation_brief_completion_count ?? 0} max={t.innovation_brief_total || 10} label="Innovation Brief" />
+              </div>
+              <span className="mt-4 block w-full rounded-xl border border-border bg-white py-2 text-center text-sm font-medium text-text-primary">
+                Enter Team →
+              </span>
+            </Card>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function TeacherDashboardView({ data }: { data: TeacherDashboard }) {
   return (
     <div>

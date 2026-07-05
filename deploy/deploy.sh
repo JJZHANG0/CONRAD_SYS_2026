@@ -80,19 +80,55 @@ ensure_python() {
   install_python_from_source
 }
 
+git_sync() {
+  local repo="${REPO_URL%.git}"
+  repo="${repo#https://github.com/}"
+  local mirrors=(
+    "$REPO_URL"
+    "https://ghfast.top/https://github.com/${repo}.git"
+    "https://gitclone.com/github.com/${repo}.git"
+  )
+
+  if [ "${SKIP_GIT_PULL:-0}" = "1" ]; then
+    echo "==> Skipping git pull (SKIP_GIT_PULL=1)"
+    cd "$APP_DIR"
+    return 0
+  fi
+
+  echo "==> Cloning / updating code..."
+  if [ -d "$APP_DIR/.git" ]; then
+    cd "$APP_DIR"
+    for url in "${mirrors[@]}"; do
+      echo "    trying: $url"
+      if git pull "$url" main; then
+        return 0
+      fi
+    done
+    echo "ERROR: git pull failed from GitHub and all mirrors."
+    echo "Try from your Mac: rsync -avz --exclude node_modules --exclude venv --exclude .next ./ root@39.102.56.62:/opt/conrad_sys/"
+    echo "Then on server: SKIP_GIT_PULL=1 bash deploy/deploy.sh"
+    return 1
+  fi
+
+  for url in "${mirrors[@]}"; do
+    echo "    trying: $url"
+    if git clone "$url" "$APP_DIR"; then
+      cd "$APP_DIR"
+      return 0
+    fi
+    rm -rf "$APP_DIR"
+  done
+  echo "ERROR: git clone failed from GitHub and all mirrors."
+  return 1
+}
+
 echo "==> Installing system packages..."
 install_python_packages
 
 PYTHON_BIN="$(ensure_python)"
 echo "==> Using Python: $PYTHON_BIN ($($PYTHON_BIN --version))"
 
-echo "==> Cloning / updating code..."
-if [ -d "$APP_DIR/.git" ]; then
-  cd "$APP_DIR" && git pull origin main
-else
-  git clone "$REPO_URL" "$APP_DIR"
-  cd "$APP_DIR"
-fi
+git_sync
 
 echo "==> Backend setup..."
 cd "$APP_DIR/backend"

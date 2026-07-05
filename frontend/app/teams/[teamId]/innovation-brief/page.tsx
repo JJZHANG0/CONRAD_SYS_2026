@@ -26,8 +26,8 @@ function BriefContent() {
   const [error, setError] = useState("");
 
   const tid = Number(teamId);
-  const backHref = user?.role === "teacher" ? `/teams/${teamId}` : "/dashboard";
-  const backLabel = user?.role === "teacher" ? "Back to Team" : "Back to Dashboard";
+  const backHref = user?.role === "student" ? "/dashboard" : `/teams/${teamId}`;
+  const backLabel = user?.role === "student" ? "Back to Dashboard" : "Back to Team";
 
   const load = () => {
     if (!tid || Number.isNaN(tid)) {
@@ -65,7 +65,7 @@ function BriefContent() {
     );
   }
 
-  const canEdit = user?.role === "teacher" || user?.role === "student";
+  const canEdit = user?.role === "teacher" || user?.role === "student" || user?.role === "operations";
 
   return (
     <InnovationBriefForm
