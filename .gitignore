@@ -29,3 +29,7 @@ frontend/*.tsbuildinfo
 .env
 .env.local
 *.pem
+
+# Bulk import data (contains passwords — do not commit)
+docs/imports/*.xlsx
+docs/.~*
