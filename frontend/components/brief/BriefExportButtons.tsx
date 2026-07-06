@@ -23,8 +23,9 @@ export function BriefExportButtons({ brief, meta }: Props) {
       } else {
         await exportBriefDocx(brief, meta);
       }
-    } catch {
-      setError("导出失败，请重试");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "导出失败，请重试";
+      setError(message.includes("失败") || message.includes("无法") ? message : "导出失败，请重试");
     } finally {
       setLoading(null);
     }

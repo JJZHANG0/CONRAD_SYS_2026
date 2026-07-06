@@ -36,6 +36,14 @@ function formatExportDate(): string {
   });
 }
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function answerHtml(value: string): string {
   if (!value || isRichTextEmpty(value)) {
     return '<p class="empty">（未填写 / Not provided）</p>';
@@ -43,17 +51,18 @@ function answerHtml(value: string): string {
   return value;
 }
 
-function buildExportHtml(brief: InnovationBrief, meta: BriefExportMeta): string {
+function buildExportHtml(brief: InnovationBrief, meta: BriefExportMeta, pdfSafe = false): string {
   const exportedAt = formatExportDate();
+  const e = escapeHtml;
   const sections = BRIEF_QUESTIONS.map((q) => {
     const val = String(brief[q.id] || "");
     return `
       <section class="question-block">
         <div class="question-head">
           <span class="q-badge">Q${q.q}</span>
-          <div>
-            <h2 class="q-title">${q.titleEn}</h2>
-            <p class="q-subtitle">${q.titleZh}</p>
+          <div class="question-titles">
+            <h2 class="q-title">${e(q.titleEn)}</h2>
+            <p class="q-subtitle">${e(q.titleZh)}</p>
           </div>
         </div>
         <div class="answer rich-content">${answerHtml(val)}</div>
@@ -61,27 +70,36 @@ function buildExportHtml(brief: InnovationBrief, meta: BriefExportMeta): string 
     `;
   }).join("");
 
+  const coverStyle = pdfSafe
+    ? "background:#4f46e5;"
+    : "background:linear-gradient(135deg,#2563eb 0%,#7c3aed 100%);";
+  const metaStyle = pdfSafe
+    ? "display:block;"
+    : "display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;";
+  const metaItemStyle = pdfSafe ? "display:inline-block;width:48%;vertical-align:top;margin-bottom:10px;" : "";
+  const badgeStyle = pdfSafe ? "float:left;margin-right:12px;" : "";
+
   return `
     <div class="brief-export-root">
-      <header class="cover">
+      <header class="cover" style="${coverStyle}">
         <p class="brand">CONRAD CHALLENGE · STEMHUB</p>
         <h1 class="doc-title">Innovation Brief</h1>
         <p class="doc-subtitle">创新简报</p>
-        <div class="meta-grid">
-          <div><span class="label">Team / 队伍</span><strong>${meta.teamName}</strong></div>
-          <div><span class="label">Project / 项目</span><strong>${meta.projectName}</strong></div>
+        <div class="meta-grid" style="${metaStyle}">
+          <div style="${metaItemStyle}"><span class="label">Team / 队伍</span><strong>${e(meta.teamName)}</strong></div>
+          <div style="${metaItemStyle}"><span class="label">Project / 项目</span><strong>${e(meta.projectName)}</strong></div>
           ${
             meta.challengeCategory
-              ? `<div><span class="label">Category / 类别</span><strong>${meta.challengeCategory}</strong></div>`
+              ? `<div style="${metaItemStyle}"><span class="label">Category / 类别</span><strong>${e(meta.challengeCategory)}</strong></div>`
               : ""
           }
           ${
             meta.teacherName
-              ? `<div><span class="label">Teacher / 带队老师</span><strong>${meta.teacherName}</strong></div>`
+              ? `<div style="${metaItemStyle}"><span class="label">Teacher / 带队老师</span><strong>${e(meta.teacherName)}</strong></div>`
               : ""
           }
-          <div><span class="label">Completion / 完成度</span><strong>${brief.completion_count} / 10</strong></div>
-          <div><span class="label">Exported / 导出时间</span><strong>${exportedAt}</strong></div>
+          <div style="${metaItemStyle}"><span class="label">Completion / 完成度</span><strong>${brief.completion_count} / 10</strong></div>
+          <div style="${metaItemStyle}"><span class="label">Exported / 导出时间</span><strong>${e(exportedAt)}</strong></div>
         </div>
       </header>
       <main>${sections}</main>
@@ -96,9 +114,12 @@ function buildExportHtml(brief: InnovationBrief, meta: BriefExportMeta): string 
         line-height: 1.65;
         font-size: 11pt;
         background: #fff;
+        width: 794px;
+        box-sizing: border-box;
+        padding: 0;
+        margin: 0;
       }
       .cover {
-        background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
         color: #fff;
         padding: 28px 32px 32px;
         border-radius: 12px;
@@ -123,9 +144,6 @@ function buildExportHtml(brief: InnovationBrief, meta: BriefExportMeta): string 
         opacity: 0.92;
       }
       .meta-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px 24px;
         background: rgba(255,255,255,0.12);
         border-radius: 10px;
         padding: 16px 18px;
@@ -138,23 +156,18 @@ function buildExportHtml(brief: InnovationBrief, meta: BriefExportMeta): string 
       }
       .meta-grid strong { font-size: 10.5pt; font-weight: 600; }
       .question-block {
-        break-inside: avoid;
-        page-break-inside: avoid;
         margin-bottom: 20px;
         border: 1px solid #e2e8f0;
         border-radius: 10px;
         overflow: hidden;
       }
       .question-head {
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
         padding: 14px 16px;
         background: #f8fafc;
         border-bottom: 3px solid #7c3aed;
+        ${pdfSafe ? "" : "display:flex;align-items:flex-start;gap:12px;"}
       }
       .q-badge {
-        flex-shrink: 0;
         width: 32px;
         height: 32px;
         line-height: 32px;
@@ -164,7 +177,9 @@ function buildExportHtml(brief: InnovationBrief, meta: BriefExportMeta): string 
         color: #7c3aed;
         font-weight: 700;
         font-size: 11pt;
+        ${badgeStyle}
       }
+      .question-titles { overflow: hidden; }
       .q-title {
         margin: 0;
         font-size: 12pt;
@@ -304,33 +319,116 @@ function noBorders() {
   return { top: none, bottom: none, left: none, right: none };
 }
 
-export async function exportBriefPdf(brief: InnovationBrief, meta: BriefExportMeta): Promise<void> {
-  const wrapper = document.createElement("div");
-  wrapper.style.position = "fixed";
-  wrapper.style.left = "-10000px";
-  wrapper.style.top = "0";
-  wrapper.style.width = "794px";
-  wrapper.style.background = "#ffffff";
-  wrapper.innerHTML = buildExportHtml(brief, meta);
-  document.body.appendChild(wrapper);
+function waitForLayout(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+}
 
+function mountPdfFrame(html: string): { root: HTMLElement; cleanup: () => void } {
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("title", "brief-pdf-export");
+  Object.assign(iframe.style, {
+    position: "fixed",
+    left: "0",
+    top: "0",
+    width: "794px",
+    border: "none",
+    zIndex: "2147483647",
+    opacity: "0.01",
+    pointerEvents: "none",
+  });
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!doc) {
+    document.body.removeChild(iframe);
+    throw new Error("无法创建 PDF 渲染环境");
+  }
+
+  doc.open();
+  doc.write(
+    `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#fff;">${html}</body></html>`
+  );
+  doc.close();
+
+  const root = doc.querySelector(".brief-export-root") as HTMLElement | null;
+  if (!root) {
+    document.body.removeChild(iframe);
+    throw new Error("导出内容加载失败");
+  }
+
+  iframe.style.height = `${Math.max(doc.body.scrollHeight, root.scrollHeight) + 20}px`;
+
+  return {
+    root,
+    cleanup: () => {
+      if (iframe.parentNode) document.body.removeChild(iframe);
+    },
+  };
+}
+
+async function canvasToPdf(canvas: HTMLCanvasElement, filename: string): Promise<void> {
+  const { jsPDF } = await import("jspdf");
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 8;
+  const contentWidth = pageWidth - margin * 2;
+  const contentHeight = pageHeight - margin * 2;
+
+  const imgWidth = contentWidth;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+  let heightLeft = imgHeight;
+  let offsetY = 0;
+
+  const imgData = canvas.toDataURL("image/jpeg", 0.92);
+
+  pdf.addImage(imgData, "JPEG", margin, margin, imgWidth, imgHeight);
+  heightLeft -= contentHeight;
+
+  while (heightLeft > 0) {
+    offsetY = heightLeft - imgHeight;
+    pdf.addPage();
+    pdf.addImage(imgData, "JPEG", margin, offsetY + margin, imgWidth, imgHeight);
+    heightLeft -= contentHeight;
+  }
+
+  pdf.save(filename);
+}
+
+export async function exportBriefPdf(brief: InnovationBrief, meta: BriefExportMeta): Promise<void> {
+  const html = buildExportHtml(brief, meta, true);
+  const { root, cleanup } = mountPdfFrame(html);
   const filename = `${safeFilename(meta.teamName)}_Innovation_Brief.pdf`;
 
   try {
-    const html2pdf = (await import("html2pdf.js")).default;
-    await html2pdf()
-      .set({
-        margin: [12, 12, 14, 12],
-        filename,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-      })
-      .from(wrapper.querySelector(".brief-export-root") as HTMLElement)
-      .save();
+    await waitForLayout();
+    await new Promise((r) => setTimeout(r, 120));
+
+    const html2canvas = (await import("html2canvas")).default;
+    const scale = root.scrollHeight > 10000 ? 1 : root.scrollHeight > 6000 ? 1.25 : 1.5;
+
+    const canvas = await html2canvas(root, {
+      scale,
+      useCORS: true,
+      logging: false,
+      backgroundColor: "#ffffff",
+      width: 794,
+      windowWidth: 794,
+      scrollX: 0,
+      scrollY: 0,
+    });
+
+    if (!canvas.width || !canvas.height) {
+      throw new Error("PDF 画布生成失败");
+    }
+
+    await canvasToPdf(canvas, filename);
   } finally {
-    document.body.removeChild(wrapper);
+    cleanup();
   }
 }
 
