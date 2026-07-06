@@ -22,6 +22,8 @@ function BriefContent() {
   const [brief, setBrief] = useState<InnovationBrief | null>(null);
   const [teamName, setTeamName] = useState("");
   const [projectName, setProjectName] = useState("");
+  const [challengeCategory, setChallengeCategory] = useState("");
+  const [teacherName, setTeacherName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -42,6 +44,8 @@ function BriefContent() {
         setBrief(b);
         setTeamName(t.name);
         setProjectName(t.project_name);
+        setChallengeCategory(t.challenge_category);
+        setTeacherName(t.teacher?.display_name || "");
       })
       .catch((err) => setError(getErrorMessage(err)))
       .finally(() => setLoading(false));
@@ -66,6 +70,7 @@ function BriefContent() {
   }
 
   const canEdit = user?.role === "teacher" || user?.role === "student";
+  const canExport = user?.role === "operations";
 
   return (
     <InnovationBriefForm
@@ -73,6 +78,13 @@ function BriefContent() {
       teamName={teamName}
       projectName={projectName}
       canEdit={canEdit}
+      canExport={canExport}
+      exportMeta={{
+        teamName,
+        projectName,
+        challengeCategory,
+        teacherName,
+      }}
       onUpdated={setBrief}
       backHref={backHref}
       backLabel={backLabel}

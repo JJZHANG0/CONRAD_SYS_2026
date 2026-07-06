@@ -4,15 +4,18 @@ import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, TextArea, SaveIndicator, Button, ProgressBar } from "@/components/ui";
+import { BriefExportButtons } from "@/components/brief/BriefExportButtons";
 import { BRIEF_QUESTIONS, BRIEF_TOTAL_WORD_LIMIT, type InnovationBrief } from "@/types/brief";
+import type { BriefExportMeta } from "@/utils/briefExport";
 import type { SaveStatus } from "@/types/log";
 import { updateBrief } from "@/lib/briefApi";
 import { debounceSave, isOverWordLimit, wordCount } from "@/utils/completion";
 import { isRichTextEmpty } from "@/utils/richText";
 
-export function InnovationBriefForm({ brief, teamName, projectName, canEdit, onUpdated, backHref, backLabel, saveRedirectHref = "/dashboard" }: {
+export function InnovationBriefForm({ brief, teamName, projectName, canEdit, canExport, exportMeta, onUpdated, backHref, backLabel, saveRedirectHref = "/dashboard" }: {
   brief: InnovationBrief; teamName: string; projectName: string;
-  canEdit: boolean; onUpdated: (b: InnovationBrief) => void;
+  canEdit: boolean; canExport?: boolean; exportMeta?: BriefExportMeta;
+  onUpdated: (b: InnovationBrief) => void;
   backHref?: string; backLabel?: string;
   saveRedirectHref?: string;
 }) {
@@ -95,6 +98,12 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, onU
           </div>
         </div>
       </Card>
+
+      {canExport && exportMeta && (
+        <div className="mb-6">
+          <BriefExportButtons brief={data} meta={exportMeta} />
+        </div>
+      )}
 
       <div className="space-y-4">
         {BRIEF_QUESTIONS.map((q) => {
