@@ -66,7 +66,11 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
     }
   }, [brief.team, canEdit, dataRef, onUpdated, router, saveRedirectHref, setData]);
 
-  const scheduleAutoSave = useDebouncedAutoSave(save);
+  const { scheduleAutoSave } = useDebouncedAutoSave(save);
+
+  const handleManualSave = () => {
+    void save(true, { allowInvalid: true });
+  };
 
   return (
     <div>
@@ -102,6 +106,9 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
             <p className={`mt-2 text-xs tabular-nums ${totalWords > BRIEF_TOTAL_WORD_LIMIT ? "text-red-500" : "text-text-secondary"}`}>
               Total: {totalWords} / {BRIEF_TOTAL_WORD_LIMIT} words
             </p>
+            {hasErrors && canEdit && (
+              <p className="mt-2 text-xs text-amber-600">部分题目超出字数限制，内容仍会保存，请尽快修改</p>
+            )}
           </div>
         </div>
       </Card>
@@ -132,10 +139,11 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
                 </span>
               </div>
               <TextArea
+                key={q.id}
                 labelEn="" labelZh="" helper={q.helper}
                 value={val} maxWords={q.maxWords}
                 onChange={(v) => { setData((prev) => ({ ...prev, [q.id]: v })); }}
-                onBlurSave={() => scheduleAutoSave()}
+                onBlurSave={() => scheduleAutoSave(true)}
                 disabled={!canEdit}
                 large
                 error={overSection ? "Word limit exceeded" : undefined}
@@ -145,7 +153,7 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
         })}
       </div>
       {canEdit && (
-        <Button className="mt-6" onClick={() => save(true)} disabled={hasErrors}>
+        <Button className="mt-6" onClick={handleManualSave}>
           Save Brief
         </Button>
       )}

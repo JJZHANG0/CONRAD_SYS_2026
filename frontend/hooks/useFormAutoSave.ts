@@ -14,21 +14,34 @@ export function useDebouncedAutoSave(
   saveRef.current = save;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const scheduleAutoSave = useCallback(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      void saveRef.current(false, { allowInvalid: true });
-    }, delay);
-  }, [delay]);
+  const runSave = useCallback(() => {
+    void saveRef.current(false, { allowInvalid: true });
+  }, []);
 
-  useEffect(
-    () => () => {
+  const scheduleAutoSave = useCallback(
+    (immediate = false) => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      const wait = immediate ? 200 : delay;
+      timerRef.current = setTimeout(runSave, wait);
     },
-    []
+    [delay, runSave]
   );
 
-  return scheduleAutoSave;
+  const flushAutoSave = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    runSave();
+  }, [runSave]);
+
+  useEffect(() => {
+    const onLeave = () => flushAutoSave();
+    window.addEventListener("beforeunload", onLeave);
+    return () => {
+      window.removeEventListener("beforeunload", onLeave);
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [flushAutoSave]);
+
+  return { scheduleAutoSave, flushAutoSave };
 }
 
 /** Form state that stays in sync with a ref for immediate reads inside debounced saves. */
