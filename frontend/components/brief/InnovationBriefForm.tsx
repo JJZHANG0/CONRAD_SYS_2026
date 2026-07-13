@@ -12,6 +12,7 @@ import { updateBrief } from "@/lib/briefApi";
 import { getErrorMessage } from "@/lib/apiClient";
 import { useDebouncedAutoSave, useSyncedFormState } from "@/hooks/useFormAutoSave";
 import { isOverWordLimit, wordCount } from "@/utils/completion";
+import { buildTextFormPayload } from "@/utils/formPayload";
 import { isRichTextEmpty } from "@/utils/richText";
 
 export function InnovationBriefForm({ brief, teamName, projectName, canEdit, canExport, exportMeta, onUpdated, backHref, backLabel, saveRedirectHref = "/dashboard" }: {
@@ -47,8 +48,10 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
     setSaveStatus("saving");
     setSaveError("");
     try {
-      const payload: Record<string, string> = {};
-      BRIEF_QUESTIONS.forEach((q) => { payload[q.id] = String(current[q.id] || ""); });
+      const payload = buildTextFormPayload(
+        BRIEF_QUESTIONS.map((q) => q.id),
+        current
+      );
       const updated = await updateBrief(brief.team, payload as Partial<InnovationBrief>);
       const merged = {
         ...updated,

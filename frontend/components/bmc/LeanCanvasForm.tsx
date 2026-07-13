@@ -10,6 +10,7 @@ import { updateLeanCanvas } from "@/lib/bmcApi";
 import { getErrorMessage } from "@/lib/apiClient";
 import { useDebouncedAutoSave, useSyncedFormState } from "@/hooks/useFormAutoSave";
 import { isOverWordLimit } from "@/utils/completion";
+import { buildTextFormPayload } from "@/utils/formPayload";
 import { isRichTextEmpty } from "@/utils/richText";
 
 export function LeanCanvasForm({
@@ -51,10 +52,10 @@ export function LeanCanvasForm({
       setSaveStatus("saving");
       setSaveError("");
       try {
-        const payload: Record<string, string> = {};
-        BMC_QUESTIONS.forEach((q) => {
-          payload[q.id] = String(current[q.id] || "");
-        });
+        const payload = buildTextFormPayload(
+          BMC_QUESTIONS.map((q) => q.id),
+          current
+        );
         const updated = await updateLeanCanvas(canvas.team, payload as Partial<LeanCanvas>);
         const merged = {
           ...updated,

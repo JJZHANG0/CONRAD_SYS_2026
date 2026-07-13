@@ -2,6 +2,7 @@ import logging
 
 from django.db.utils import DatabaseError
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from apps.common.db import run_with_db_retry
@@ -29,6 +30,8 @@ def get_or_create_serialized(serializer_class, team, factory):
 def handle_form_database_errors(action):
     try:
         return action()
+    except ValidationError:
+        raise
     except DatabaseError as exc:
         logger.warning("Database error in form view: %s", exc)
         return Response(
