@@ -149,6 +149,7 @@ python manage.py collectstatic --noinput
 
 echo "==> Frontend setup..."
 cd "$APP_DIR/frontend"
+rm -rf .next
 npm ci
 if [ ! -f .env.production ]; then
   cp .env.production.example .env.production

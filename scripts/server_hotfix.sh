@@ -27,8 +27,12 @@ curl -s "http://127.0.0.1:8000/api/health/" || true
 echo ""
 
 cd ../frontend
-echo "==> Rebuild frontend..."
+echo "==> Rebuild frontend (clean)..."
+systemctl stop conrad-frontend || true
+rm -rf .next
 npm run build
-systemctl restart conrad-frontend
+cp "$APP_DIR/deploy/nginx.conrad.conf" /etc/nginx/conf.d/conrad.conf
+nginx -t && systemctl reload nginx
+systemctl start conrad-frontend
 
 echo "Done. Open http://39.102.56.62/api/health/ — version should NOT be 'unknown'."
