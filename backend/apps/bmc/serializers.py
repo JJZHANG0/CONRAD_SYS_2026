@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.common.text import clean_rich_text
+from apps.common.serializers import apply_safe_text_fields
 
 from .models import BMC_FIELDS, LeanCanvas
 
@@ -22,14 +22,12 @@ class LeanCanvasSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("id", "team", "created_at", "updated_at")
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_safe_text_fields(self, BMC_FIELDS)
+
     def get_completion_count(self, obj):
         return obj.completion_count()
 
     def get_completion_rate(self, obj):
         return obj.completion_rate
-
-    def validate(self, attrs):
-        for field in BMC_FIELDS:
-            if field in attrs:
-                attrs[field] = clean_rich_text(attrs[field])
-        return attrs

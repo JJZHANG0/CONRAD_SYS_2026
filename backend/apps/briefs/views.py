@@ -1,11 +1,10 @@
 from django.conf import settings
-from django.db.utils import DatabaseError, OperationalError
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.common.db import run_with_db_retry
+from apps.common.views import get_or_create_serialized, handle_form_database_errors, save_serialized_form
 from apps.teams.models import Team
 from apps.teams.permissions import user_can_access_team, user_is_team_member, user_is_team_teacher
 
@@ -26,14 +25,15 @@ class InnovationBriefView(APIView):
         team = self.get_team(team_id)
         if not team:
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
-        try:
-            brief, _ = run_with_db_retry(lambda: InnovationBrief.objects.get_or_create(team=team))
-            return Response(InnovationBriefSerializer(brief).data)
-        except (OperationalError, DatabaseError):
-            return Response(
-                {"detail": "Database is busy, please retry in a moment."},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        return handle_form_database_errors(
+            lambda: Response(
+                get_or_create_serialized(
+                    InnovationBriefSerializer,
+                    team,
+                    lambda t: InnovationBrief.objects.get_or_create(team=t),
+                )
             )
+        )
 
     def patch(self, request, team_id):
         team = self.get_team(team_id)
@@ -47,19 +47,9 @@ class InnovationBriefView(APIView):
         if not can_edit:
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
 
-        try:
-            brief, _ = run_with_db_retry(lambda: InnovationBrief.objects.get_or_create(team=team))
-            serializer = InnovationBriefSerializer(brief, data=request.data, partial=True)
-            serializer.is_valid(raise_exception=True)
-
-            def persist():
-                serializer.save()
-                return serializer.data
-
-            data = run_with_db_retry(persist)
+        def save():
+            brief, _ = InnovationBrief.objects.get_or_create(team=team)
+            data = save_serialized_form(brief, InnovationBriefSerializer, request.data)
             return Response(data)
-        except (OperationalError, DatabaseError):
-            return Response(
-                {"detail": "Database is busy, please retry in a moment."},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
+
+        return handle_form_database_errors(save)

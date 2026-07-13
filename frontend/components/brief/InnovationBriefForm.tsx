@@ -9,6 +9,7 @@ import { BRIEF_QUESTIONS, BRIEF_TOTAL_WORD_LIMIT, type InnovationBrief } from "@
 import type { BriefExportMeta } from "@/utils/briefExport";
 import type { SaveStatus } from "@/types/log";
 import { updateBrief } from "@/lib/briefApi";
+import { getErrorMessage } from "@/lib/apiClient";
 import { useDebouncedAutoSave, useSyncedFormState } from "@/hooks/useFormAutoSave";
 import { isOverWordLimit, wordCount } from "@/utils/completion";
 import { isRichTextEmpty } from "@/utils/richText";
@@ -23,6 +24,7 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
   const router = useRouter();
   const { data, setData, dataRef } = useSyncedFormState(brief);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [saveError, setSaveError] = useState("");
 
   const totalWords = useMemo(
     () => BRIEF_QUESTIONS.reduce((sum, q) => sum + wordCount(String(data[q.id] || "")), 0),
@@ -43,6 +45,7 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
     if (!options?.allowInvalid && invalid) return false;
 
     setSaveStatus("saving");
+    setSaveError("");
     try {
       const payload: Record<string, string> = {};
       BRIEF_QUESTIONS.forEach((q) => { payload[q.id] = String(current[q.id] || ""); });
@@ -60,8 +63,9 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 2000);
       return true;
-    } catch {
+    } catch (err) {
       setSaveStatus("failed");
+      setSaveError(getErrorMessage(err));
       return false;
     }
   }, [brief.team, canEdit, dataRef, onUpdated, router, saveRedirectHref, setData]);
@@ -108,6 +112,9 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
             </p>
             {hasErrors && canEdit && (
               <p className="mt-2 text-xs text-amber-600">部分题目超出字数限制，内容仍会保存，请尽快修改</p>
+            )}
+            {saveError && (
+              <p className="mt-2 text-xs text-red-600">{saveError}</p>
             )}
           </div>
         </div>

@@ -7,6 +7,7 @@ import { Card, TextArea, SaveIndicator, Button, ProgressBar } from "@/components
 import { BMC_QUESTIONS, type LeanCanvas } from "@/types/bmc";
 import type { SaveStatus } from "@/types/log";
 import { updateLeanCanvas } from "@/lib/bmcApi";
+import { getErrorMessage } from "@/lib/apiClient";
 import { useDebouncedAutoSave, useSyncedFormState } from "@/hooks/useFormAutoSave";
 import { isOverWordLimit } from "@/utils/completion";
 import { isRichTextEmpty } from "@/utils/richText";
@@ -33,6 +34,7 @@ export function LeanCanvasForm({
   const router = useRouter();
   const { data, setData, dataRef } = useSyncedFormState(canvas);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [saveError, setSaveError] = useState("");
 
   const hasErrors = BMC_QUESTIONS.some((q) => isOverWordLimit(String(data[q.id] || ""), q.maxWords));
 
@@ -47,6 +49,7 @@ export function LeanCanvasForm({
       if (!options?.allowInvalid && invalid) return false;
 
       setSaveStatus("saving");
+      setSaveError("");
       try {
         const payload: Record<string, string> = {};
         BMC_QUESTIONS.forEach((q) => {
@@ -66,8 +69,9 @@ export function LeanCanvasForm({
         setSaveStatus("saved");
         setTimeout(() => setSaveStatus("idle"), 2000);
         return true;
-      } catch {
+      } catch (err) {
         setSaveStatus("failed");
+        setSaveError(getErrorMessage(err));
         return false;
       }
     },
@@ -113,6 +117,9 @@ export function LeanCanvasForm({
             <ProgressBar value={data.completion_count} max={12} />
             {hasErrors && canEdit && (
               <p className="mt-2 text-xs text-amber-600">部分题目超出字数限制，内容仍会保存，请尽快修改</p>
+            )}
+            {saveError && (
+              <p className="mt-2 text-xs text-red-600">{saveError}</p>
             )}
           </div>
         </div>
