@@ -71,7 +71,12 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
-DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=600)}
+DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=0)}
+if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":
+    DATABASES["default"]["OPTIONS"] = {"timeout": 30}
+
+# Enable SQLite WAL + busy timeout for concurrent gunicorn workers.
+import apps.common.db  # noqa: E402,F401
 
 AUTH_USER_MODEL = "accounts.User"
 

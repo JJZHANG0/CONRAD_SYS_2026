@@ -46,7 +46,7 @@ class InnovationBrief(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def completion_count(self):
-        return sum(1 for f in BRIEF_FIELDS if getattr(self, f, "").strip())
+        return sum(1 for f in BRIEF_FIELDS if (getattr(self, f) or "").strip())
 
     @property
     def completion_rate(self):

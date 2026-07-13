@@ -1,6 +1,7 @@
 from apps.briefs.models import BRIEF_FIELDS, InnovationBrief
 from apps.bmc.models import BMC_FIELDS, LeanCanvas
 from apps.logs.models import DailyLog
+from django.db.utils import DatabaseError, OperationalError
 
 
 def is_log_complete(log: DailyLog) -> bool:
@@ -35,7 +36,7 @@ def student_log_stats(student, team):
 def brief_stats(team):
     try:
         brief = team.innovation_brief
-    except InnovationBrief.DoesNotExist:
+    except (InnovationBrief.DoesNotExist, OperationalError, DatabaseError):
         return {"innovation_brief_completion_count": 0, "innovation_brief_total": len(BRIEF_FIELDS)}
     return {
         "innovation_brief_completion_count": brief.completion_count(),
@@ -46,7 +47,7 @@ def brief_stats(team):
 def bmc_stats(team):
     try:
         canvas = team.lean_canvas
-    except LeanCanvas.DoesNotExist:
+    except (LeanCanvas.DoesNotExist, OperationalError, DatabaseError):
         return {"bmc_completion_count": 0, "bmc_total": len(BMC_FIELDS)}
     return {
         "bmc_completion_count": canvas.completion_count(),
