@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from apps.accounts.serializers import UserSerializer
-from apps.teams.services import brief_stats, student_log_stats, team_log_stats
+from apps.teams.services import brief_stats, student_log_stats, team_content_stats, team_log_stats
 
 from .models import Team, TeamMember
 
@@ -34,8 +34,8 @@ class TeamListSerializer(serializers.ModelSerializer):
 
     def get_stats(self, obj):
         log_stats = team_log_stats(obj)
-        brief = brief_stats(obj)
-        return {**log_stats, **brief}
+        content = team_content_stats(obj)
+        return {**log_stats, **content}
 
 
 class TeamDetailSerializer(serializers.ModelSerializer):
@@ -53,5 +53,5 @@ class TeamDetailSerializer(serializers.ModelSerializer):
 
     def get_stats(self, obj):
         log_stats = team_log_stats(obj)
-        brief = brief_stats(obj)
-        return {**log_stats, **brief}
+        content = team_content_stats(obj)
+        return {**log_stats, **content}

@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand
 from apps.briefs.models import InnovationBrief
 from apps.logs.models import DailyLog
 from apps.teams.models import Team, TeamMember
-from apps.teams.services import create_daily_logs_for_member, create_innovation_brief
+from apps.teams.services import create_daily_logs_for_member, create_innovation_brief, create_lean_canvas
 
 User = get_user_model()
 
@@ -72,6 +72,7 @@ class Command(BaseCommand):
             create_daily_logs_for_member(team, student)
 
         create_innovation_brief(team)
+        create_lean_canvas(team)
 
         log = DailyLog.objects.get(team=team, student=students[0], day=1)
         for k, v in SAMPLE_DAY1.items():

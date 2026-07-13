@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from apps.teams.models import Team, TeamMember
-from apps.teams.services import create_daily_logs_for_member, create_innovation_brief
+from apps.teams.services import create_daily_logs_for_member, create_innovation_brief, create_lean_canvas
 
 User = get_user_model()
 
@@ -232,6 +232,7 @@ class Command(BaseCommand):
                 },
             )
             create_innovation_brief(team)
+            create_lean_canvas(team)
             mapping[row["team_name"]] = team
             self.stdout.write(f"{'Created' if created else 'Updated'} team: {team.name}")
         return mapping

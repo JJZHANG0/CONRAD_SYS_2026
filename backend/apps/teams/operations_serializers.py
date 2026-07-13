@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from apps.accounts.models import User
 from apps.teams.models import Team, TeamMember
-from apps.teams.services import create_daily_logs_for_member, create_innovation_brief
+from apps.teams.services import create_daily_logs_for_member, create_innovation_brief, create_lean_canvas
 
 
 class OperationsTeacherSerializer(serializers.ModelSerializer):
@@ -38,6 +38,7 @@ class OperationsCreateTeamSerializer(serializers.Serializer):
             description=validated_data.get("description", ""),
         )
         create_innovation_brief(team)
+        create_lean_canvas(team)
         return team
 
 

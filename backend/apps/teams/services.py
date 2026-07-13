@@ -1,4 +1,5 @@
 from apps.briefs.models import BRIEF_FIELDS, InnovationBrief
+from apps.bmc.models import BMC_FIELDS, LeanCanvas
 from apps.logs.models import DailyLog
 
 
@@ -42,6 +43,21 @@ def brief_stats(team):
     }
 
 
+def bmc_stats(team):
+    try:
+        canvas = team.lean_canvas
+    except LeanCanvas.DoesNotExist:
+        return {"bmc_completion_count": 0, "bmc_total": len(BMC_FIELDS)}
+    return {
+        "bmc_completion_count": canvas.completion_count(),
+        "bmc_total": len(BMC_FIELDS),
+    }
+
+
+def team_content_stats(team):
+    return {**brief_stats(team), **bmc_stats(team)}
+
+
 def create_daily_logs_for_member(team, student):
     for day in range(1, 6):
         DailyLog.objects.get_or_create(team=team, student=student, day=day)
@@ -49,6 +65,10 @@ def create_daily_logs_for_member(team, student):
 
 def create_innovation_brief(team):
     InnovationBrief.objects.get_or_create(team=team)
+
+
+def create_lean_canvas(team):
+    LeanCanvas.objects.get_or_create(team=team)
 
 
 def next_incomplete_day(student, team):

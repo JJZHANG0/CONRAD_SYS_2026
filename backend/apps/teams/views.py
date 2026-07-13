@@ -10,9 +10,9 @@ from apps.teams.models import Team, TeamMember
 from .permissions import user_can_access_team, user_is_team_member, user_is_team_teacher
 from .serializers import TeamDetailSerializer, TeamListSerializer
 from .services import (
-    brief_stats,
     next_incomplete_day,
     student_log_stats,
+    team_content_stats,
     team_log_stats,
 )
 
@@ -53,7 +53,7 @@ class DashboardView(APIView):
             teams = Team.objects.all().prefetch_related("members")
             team_data = []
             for team in teams:
-                stats = {**team_log_stats(team), **brief_stats(team)}
+                stats = {**team_log_stats(team), **team_content_stats(team)}
                 team_data.append({
                     "id": team.id,
                     "name": team.name,
@@ -68,7 +68,7 @@ class DashboardView(APIView):
             teams = Team.objects.filter(teacher=user).prefetch_related("members")
             team_data = []
             for team in teams:
-                stats = {**team_log_stats(team), **brief_stats(team)}
+                stats = {**team_log_stats(team), **team_content_stats(team)}
                 team_data.append({
                     "id": team.id,
                     "name": team.name,

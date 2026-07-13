@@ -15,15 +15,21 @@ export function TeamHeader({ team }: { team: TeamDetail }) {
           <p className="text-text-secondary">{team.project_name}</p>
           <p className="mt-1 text-sm">Teacher: {team.teacher.display_name}</p>
         </div>
-        <Link href={`/teams/${team.id}/innovation-brief`}>
-          <Button variant="secondary">Innovation Brief</Button>
-        </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link href={`/teams/${team.id}/innovation-brief`}>
+              <Button variant="secondary">Innovation Brief</Button>
+            </Link>
+            <Link href={`/teams/${team.id}/lean-canvas`}>
+              <Button variant="secondary">Lean Canvas</Button>
+            </Link>
+          </div>
       </div>
-      <div className="mt-6 grid gap-3 sm:grid-cols-4">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard label="Members" value={`${s.member_count}/5`} accent="blue" />
         <StatCard label="Logs Done" value={`${s.log_completion_count}/${s.total_log_count}`} accent="purple" />
         <StatCard label="Comments" value={`${s.teacher_comment_count}/${s.total_log_count}`} accent="yellow" />
         <StatCard label="Brief" value={`${s.innovation_brief_completion_count}/${s.innovation_brief_total}`} accent="blue" />
+        <StatCard label="BMC" value={`${s.bmc_completion_count}/${s.bmc_total}`} accent="yellow" />
       </div>
     </Card>
   );

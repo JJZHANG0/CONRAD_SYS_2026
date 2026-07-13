@@ -5,6 +5,8 @@ export interface TeamStats {
   teacher_comment_count: number;
   innovation_brief_completion_count: number;
   innovation_brief_total: number;
+  bmc_completion_count: number;
+  bmc_total: number;
 }
 
 export interface TeamSummary {

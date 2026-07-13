@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "apps.teams",
     "apps.logs",
     "apps.briefs",
+    "apps.bmc",
 ]
 
 MIDDLEWARE = [
@@ -121,3 +122,4 @@ SPECTACULAR_SETTINGS = {
 }
 
 STUDENTS_CAN_EDIT_BRIEF = True
+STUDENTS_CAN_EDIT_BMC = True

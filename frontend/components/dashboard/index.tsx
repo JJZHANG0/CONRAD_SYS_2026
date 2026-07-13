@@ -41,7 +41,7 @@ export function StudentDashboardView({ data }: { data: StudentDashboard }) {
     <div>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-text-primary">My Dashboard</h1>
-        <p className="mt-1 text-text-secondary">Team Progress, Daily Reflection, Innovation Brief</p>
+        <p className="mt-1 text-text-secondary">Team Progress, Daily Reflection, Innovation Brief & Lean Canvas</p>
       </div>
       <Card className="mb-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -51,9 +51,10 @@ export function StudentDashboardView({ data }: { data: StudentDashboard }) {
             <p className="text-sm text-text-secondary">{data.team.project_name} · {data.team.challenge_category}</p>
             <p className="mt-1 text-sm">Teacher: <span className="font-medium text-primary">{data.team.teacher_name}</span></p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <Link href="/my-logs"><Button>Write Today&apos;s Log</Button></Link>
             <Link href={`/teams/${data.team.id}/innovation-brief`}><Button variant="secondary">Innovation Brief</Button></Link>
+            <Link href={`/teams/${data.team.id}/lean-canvas`}><Button variant="secondary">Lean Canvas</Button></Link>
           </div>
         </div>
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -79,6 +80,7 @@ export function TeamCard({ team }: { team: TeacherDashboard["teams"][0] }) {
           <ProgressBar value={team.log_completion_count} max={team.total_log_count || 1} label="Student Logs" />
           <ProgressBar value={team.teacher_comment_count} max={team.total_log_count || 1} label="Teacher Comments" />
           <ProgressBar value={team.innovation_brief_completion_count ?? 0} max={team.innovation_brief_total || 10} label="Innovation Brief" />
+          <ProgressBar value={team.bmc_completion_count ?? 0} max={team.bmc_total || 12} label="Lean Canvas" />
         </div>
         <span className="mt-4 block w-full rounded-xl border border-border bg-white py-2 text-center text-sm font-medium text-text-primary">
           Enter Team →
@@ -93,7 +95,7 @@ export function OperationsDashboardView({ data, onRefresh }: OperationsDashboard
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-text-primary">Operations Dashboard</h1>
-        <p className="mt-1 text-text-secondary">All teams · {data.teams.length} total · 只读浏览 Log / Brief</p>
+        <p className="mt-1 text-text-secondary">All teams · {data.teams.length} total · 只读浏览 Log / Brief / BMC</p>
       </div>
 
       {onRefresh && <OperationsManagementPanel teams={data.teams} onChanged={onRefresh} />}
@@ -112,6 +114,7 @@ export function OperationsDashboardView({ data, onRefresh }: OperationsDashboard
                 <ProgressBar value={t.log_completion_count} max={t.total_log_count || 1} label="Student Logs" />
                 <ProgressBar value={t.teacher_comment_count} max={t.total_log_count || 1} label="Teacher Comments" />
                 <ProgressBar value={t.innovation_brief_completion_count ?? 0} max={t.innovation_brief_total || 10} label="Innovation Brief" />
+                <ProgressBar value={t.bmc_completion_count ?? 0} max={t.bmc_total || 12} label="Lean Canvas" />
               </div>
               <span className="mt-4 block w-full rounded-xl border border-border bg-white py-2 text-center text-sm font-medium text-text-primary">
                 Enter Team →

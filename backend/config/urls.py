@@ -10,4 +10,5 @@ urlpatterns = [
     path("api/", include("apps.teams.urls")),
     path("api/", include("apps.logs.urls")),
     path("api/", include("apps.briefs.urls")),
+    path("api/", include("apps.bmc.urls")),
 ]
