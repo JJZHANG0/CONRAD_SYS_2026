@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.common.text import clean_rich_text
+from apps.common.text import sanitize_rich_text_html
 
 
 class SafeTextField(serializers.CharField):
@@ -19,7 +19,7 @@ class SafeTextField(serializers.CharField):
         if data is None:
             return ""
         value = super().to_internal_value(data)
-        return clean_rich_text(value)
+        return sanitize_rich_text_html(value)
 
 
 def apply_safe_text_fields(serializer, field_names):

@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "corsheaders",
     "drf_spectacular",
+    "apps.common",
     "apps.accounts",
     "apps.teams",
     "apps.logs",

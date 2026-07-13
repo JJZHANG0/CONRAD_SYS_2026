@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, TextArea, SaveIndicator, Button, ProgressBar } from "@/components/ui";
@@ -11,8 +11,8 @@ import { getErrorMessage } from "@/lib/apiClient";
 import { useDebouncedAutoSave, useSyncedFormState } from "@/hooks/useFormAutoSave";
 import { useSaveMutex } from "@/hooks/useSaveMutex";
 import { isOverWordLimit } from "@/utils/completion";
-import { buildTextFormPayload } from "@/utils/formPayload";
-import { isRichTextEmpty } from "@/utils/richText";
+import { buildSingleFieldPayload, buildTextFormPayload } from "@/utils/formPayload";
+import { isRichTextEmpty, sanitizeRichTextHtml } from "@/utils/richText";
 
 export function LeanCanvasForm({
   canvas,
@@ -37,6 +37,7 @@ export function LeanCanvasForm({
   const { data, setData, dataRef } = useSyncedFormState(canvas);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [saveError, setSaveError] = useState("");
+  const pendingFieldRef = useRef<keyof LeanCanvas | null>(null);
 
   const hasErrors = BMC_QUESTIONS.some((q) => isOverWordLimit(String(data[q.id] || ""), q.maxWords));
 
@@ -53,10 +54,16 @@ export function LeanCanvasForm({
       setSaveStatus("saving");
       setSaveError("");
       try {
-        const payload = buildTextFormPayload(
-          BMC_QUESTIONS.map((q) => q.id),
-          current
-        );
+        const fieldId = pendingFieldRef.current;
+        pendingFieldRef.current = null;
+        const payload =
+          !redirectAfter && fieldId
+            ? buildSingleFieldPayload(fieldId, current, sanitizeRichTextHtml)
+            : buildTextFormPayload(
+                BMC_QUESTIONS.map((q) => q.id),
+                current,
+                sanitizeRichTextHtml
+              );
         const updated = await updateLeanCanvas(canvas.team, payload as Partial<LeanCanvas>);
         const merged = {
           ...updated,
@@ -160,7 +167,10 @@ export function LeanCanvasForm({
                 onChange={(v) => {
                   setData((prev) => ({ ...prev, [q.id]: v }));
                 }}
-                onBlurSave={() => scheduleAutoSave(true)}
+                onBlurSave={() => {
+                  pendingFieldRef.current = q.id;
+                  scheduleAutoSave(true);
+                }}
                 disabled={!canEdit}
                 large
                 error={overSection ? "Word limit exceeded" : undefined}

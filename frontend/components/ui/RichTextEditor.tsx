@@ -2,7 +2,7 @@
 
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { countWords, getPlainTextLength, isRichTextEmpty, normalizeRichText } from "@/utils/richText";
+import { countWords, getPlainTextLength, isRichTextEmpty, normalizeRichText, sanitizeRichTextHtml } from "@/utils/richText";
 
 const COLORS = [
   { name: "默认", value: "#111827" },
@@ -79,7 +79,7 @@ export function RichTextEditor({
   useLayoutEffect(() => {
     const el = editorRef.current;
     if (!el || disabled) return;
-    el.innerHTML = value || "";
+    el.innerHTML = sanitizeRichTextHtml(value || "");
     setCount(useWords ? countWords(value) : getPlainTextLength(value));
     // value intentionally omitted — remount via key when external content changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -126,7 +126,7 @@ export function RichTextEditor({
           dangerouslySetInnerHTML={{
             __html: isRichTextEmpty(value)
               ? '<p class="text-text-secondary italic">—</p>'
-              : value,
+              : sanitizeRichTextHtml(value),
           }}
         />
       </div>
@@ -203,6 +203,12 @@ export function RichTextEditor({
           contentEditable
           suppressContentEditableWarning
           onInput={() => notifyChange(false)}
+          onPaste={(e) => {
+            e.preventDefault();
+            const text = e.clipboardData.getData("text/plain");
+            document.execCommand("insertText", false, text);
+            notifyChange(true);
+          }}
           onBlur={() => {
             notifyChange(true);
             onBlurSave?.();

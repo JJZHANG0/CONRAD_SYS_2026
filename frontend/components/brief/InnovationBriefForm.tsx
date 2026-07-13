@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, TextArea, SaveIndicator, Button, ProgressBar } from "@/components/ui";
@@ -13,8 +13,8 @@ import { getErrorMessage } from "@/lib/apiClient";
 import { useDebouncedAutoSave, useSyncedFormState } from "@/hooks/useFormAutoSave";
 import { useSaveMutex } from "@/hooks/useSaveMutex";
 import { isOverWordLimit, wordCount } from "@/utils/completion";
-import { buildTextFormPayload } from "@/utils/formPayload";
-import { isRichTextEmpty } from "@/utils/richText";
+import { buildSingleFieldPayload, buildTextFormPayload } from "@/utils/formPayload";
+import { isRichTextEmpty, sanitizeRichTextHtml } from "@/utils/richText";
 
 export function InnovationBriefForm({ brief, teamName, projectName, canEdit, canExport, exportMeta, onUpdated, backHref, backLabel, saveRedirectHref = "/dashboard" }: {
   brief: InnovationBrief; teamName: string; projectName: string;
@@ -27,6 +27,7 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
   const { data, setData, dataRef } = useSyncedFormState(brief);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [saveError, setSaveError] = useState("");
+  const pendingFieldRef = useRef<keyof InnovationBrief | null>(null);
 
   const totalWords = useMemo(
     () => BRIEF_QUESTIONS.reduce((sum, q) => sum + wordCount(String(data[q.id] || "")), 0),
@@ -49,10 +50,16 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
     setSaveStatus("saving");
     setSaveError("");
     try {
-      const payload = buildTextFormPayload(
-        BRIEF_QUESTIONS.map((q) => q.id),
-        current
-      );
+      const fieldId = pendingFieldRef.current;
+      pendingFieldRef.current = null;
+      const payload =
+        !redirectAfter && fieldId
+          ? buildSingleFieldPayload(fieldId, current, sanitizeRichTextHtml)
+          : buildTextFormPayload(
+              BRIEF_QUESTIONS.map((q) => q.id),
+              current,
+              sanitizeRichTextHtml
+            );
       const updated = await updateBrief(brief.team, payload as Partial<InnovationBrief>);
       const merged = {
         ...updated,
@@ -155,7 +162,10 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
                 labelEn="" labelZh="" helper={q.helper}
                 value={val} maxWords={q.maxWords}
                 onChange={(v) => { setData((prev) => ({ ...prev, [q.id]: v })); }}
-                onBlurSave={() => scheduleAutoSave(true)}
+                onBlurSave={() => {
+                  pendingFieldRef.current = q.id;
+                  scheduleAutoSave(true);
+                }}
                 disabled={!canEdit}
                 large
                 error={overSection ? "Word limit exceeded" : undefined}
