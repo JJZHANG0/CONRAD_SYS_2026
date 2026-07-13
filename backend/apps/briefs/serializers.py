@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
-from apps.common.serializers import SafeTextField, apply_safe_text_fields
+from apps.common.serializers import apply_safe_text_fields
+from apps.common.text import sanitize_rich_text_html
 
 from .models import BRIEF_FIELDS, InnovationBrief
 
@@ -28,3 +29,9 @@ class InnovationBriefSerializer(serializers.ModelSerializer):
 
     def get_completion_rate(self, obj):
         return obj.completion_rate
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        for field in BRIEF_FIELDS:
+            data[field] = sanitize_rich_text_html(data.get(field) or "")
+        return data

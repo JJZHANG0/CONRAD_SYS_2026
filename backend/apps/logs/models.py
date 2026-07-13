@@ -31,12 +31,12 @@ class DailyLog(models.Model):
     @property
     def is_complete(self):
         return all([
-            self.work_content.strip(),
-            self.task_completion.strip(),
-            self.problems_solutions.strip(),
-            self.reflection.strip(),
+            (self.work_content or "").strip(),
+            (self.task_completion or "").strip(),
+            (self.problems_solutions or "").strip(),
+            (self.reflection or "").strip(),
         ])
 
     @property
     def has_teacher_comment(self):
-        return bool(self.teacher_comment.strip())
+        return bool((self.teacher_comment or "").strip())

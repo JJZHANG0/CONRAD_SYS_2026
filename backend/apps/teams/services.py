@@ -9,28 +9,44 @@ def is_log_complete(log: DailyLog) -> bool:
 
 
 def team_log_stats(team):
-    logs = DailyLog.objects.filter(team=team)
-    member_count = team.members.count()
-    total = member_count * 5
-    completed = sum(1 for log in logs if is_log_complete(log))
-    commented = sum(1 for log in logs if log.has_teacher_comment)
-    return {
-        "member_count": member_count,
-        "log_completion_count": completed,
-        "total_log_count": total,
-        "teacher_comment_count": commented,
-    }
+    try:
+        logs = DailyLog.objects.filter(team=team)
+        member_count = team.members.count()
+        total = member_count * 5
+        completed = sum(1 for log in logs if is_log_complete(log))
+        commented = sum(1 for log in logs if log.has_teacher_comment)
+        return {
+            "member_count": member_count,
+            "log_completion_count": completed,
+            "total_log_count": total,
+            "teacher_comment_count": commented,
+        }
+    except Exception:
+        member_count = team.members.count()
+        return {
+            "member_count": member_count,
+            "log_completion_count": 0,
+            "total_log_count": member_count * 5,
+            "teacher_comment_count": 0,
+        }
 
 
 def student_log_stats(student, team):
-    logs = DailyLog.objects.filter(team=team, student=student)
-    completed = sum(1 for log in logs if is_log_complete(log))
-    commented = sum(1 for log in logs if log.has_teacher_comment)
-    return {
-        "log_completion_count": completed,
-        "total_log_count": 5,
-        "teacher_comment_count": commented,
-    }
+    try:
+        logs = DailyLog.objects.filter(team=team, student=student)
+        completed = sum(1 for log in logs if is_log_complete(log))
+        commented = sum(1 for log in logs if log.has_teacher_comment)
+        return {
+            "log_completion_count": completed,
+            "total_log_count": 5,
+            "teacher_comment_count": commented,
+        }
+    except Exception:
+        return {
+            "log_completion_count": 0,
+            "total_log_count": 5,
+            "teacher_comment_count": 0,
+        }
 
 
 def brief_stats(team):
@@ -56,7 +72,15 @@ def bmc_stats(team):
 
 
 def team_content_stats(team):
-    return {**brief_stats(team), **bmc_stats(team)}
+    try:
+        return {**brief_stats(team), **bmc_stats(team)}
+    except Exception:
+        return {
+            "innovation_brief_completion_count": 0,
+            "innovation_brief_total": len(BRIEF_FIELDS),
+            "bmc_completion_count": 0,
+            "bmc_total": len(BMC_FIELDS),
+        }
 
 
 def create_daily_logs_for_member(team, student):
