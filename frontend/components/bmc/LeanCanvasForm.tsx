@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, TextArea, SaveIndicator, Button, ProgressBar } from "@/components/ui";
 import { BMC_QUESTIONS, type LeanCanvas } from "@/types/bmc";
 import type { SaveStatus } from "@/types/log";
 import { updateLeanCanvas } from "@/lib/bmcApi";
-import { debounceSave, isOverWordLimit } from "@/utils/completion";
+import { useDebouncedAutoSave, useSyncedFormState } from "@/hooks/useFormAutoSave";
+import { isOverWordLimit } from "@/utils/completion";
 import { isRichTextEmpty } from "@/utils/richText";
 
 export function LeanCanvasForm({
@@ -30,31 +31,34 @@ export function LeanCanvasForm({
   saveRedirectHref?: string;
 }) {
   const router = useRouter();
-  const [data, setData] = useState(canvas);
+  const { data, setData, dataRef } = useSyncedFormState(canvas);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
 
   const hasErrors = BMC_QUESTIONS.some((q) => isOverWordLimit(String(data[q.id] || ""), q.maxWords));
 
   const save = useCallback(
-    async (redirectAfter = false) => {
-      if (hasErrors || !canEdit) return false;
+    async (redirectAfter = false, options?: { allowInvalid?: boolean }) => {
+      if (!canEdit) return false;
+
+      const current = dataRef.current;
+      const invalid = BMC_QUESTIONS.some((q) =>
+        isOverWordLimit(String(current[q.id] || ""), q.maxWords)
+      );
+      if (!options?.allowInvalid && invalid) return false;
+
       setSaveStatus("saving");
       try {
         const payload: Record<string, string> = {};
         BMC_QUESTIONS.forEach((q) => {
-          payload[q.id] = String(data[q.id] || "");
+          payload[q.id] = String(current[q.id] || "");
         });
         const updated = await updateLeanCanvas(canvas.team, payload as Partial<LeanCanvas>);
-        setData((prev) => ({
-          ...prev,
-          completion_count: updated.completion_count,
-          completion_rate: updated.completion_rate,
-          updated_at: updated.updated_at,
-        }));
-        onUpdated({
+        const merged = {
           ...updated,
-          ...Object.fromEntries(BMC_QUESTIONS.map((q) => [q.id, data[q.id]])),
-        });
+          ...Object.fromEntries(BMC_QUESTIONS.map((q) => [q.id, current[q.id]])),
+        };
+        setData(merged);
+        onUpdated(merged);
         if (redirectAfter) {
           router.push(saveRedirectHref);
           return true;
@@ -67,10 +71,10 @@ export function LeanCanvasForm({
         return false;
       }
     },
-    [data, canvas.team, hasErrors, canEdit, onUpdated, router, saveRedirectHref]
+    [canvas.team, canEdit, dataRef, onUpdated, router, saveRedirectHref, setData]
   );
 
-  const debouncedSave = useMemo(() => debounceSave(save, 1500), [save]);
+  const scheduleAutoSave = useDebouncedAutoSave(save);
 
   return (
     <div>
@@ -107,6 +111,9 @@ export function LeanCanvasForm({
             {canEdit && <SaveIndicator status={saveStatus} />}
             <p className="mt-1 text-sm font-medium">{data.completion_count} / 12 completed</p>
             <ProgressBar value={data.completion_count} max={12} />
+            {hasErrors && canEdit && (
+              <p className="mt-2 text-xs text-amber-600">部分题目超出字数限制，请修正后点「Save」提交</p>
+            )}
           </div>
         </div>
       </Card>
@@ -135,6 +142,7 @@ export function LeanCanvasForm({
               <p className="mb-2 text-xs text-text-secondary">{q.helper}</p>
               <p className="mb-3 text-xs text-text-secondary/80">{q.helperZh}</p>
               <TextArea
+                key={q.id}
                 labelEn=""
                 labelZh=""
                 value={val}
@@ -142,7 +150,7 @@ export function LeanCanvasForm({
                 onChange={(v) => {
                   setData((prev) => ({ ...prev, [q.id]: v }));
                 }}
-                onBlurSave={() => debouncedSave()}
+                onBlurSave={scheduleAutoSave}
                 disabled={!canEdit}
                 large
                 error={overSection ? "Word limit exceeded" : undefined}

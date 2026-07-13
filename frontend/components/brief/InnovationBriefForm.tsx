@@ -9,7 +9,8 @@ import { BRIEF_QUESTIONS, BRIEF_TOTAL_WORD_LIMIT, type InnovationBrief } from "@
 import type { BriefExportMeta } from "@/utils/briefExport";
 import type { SaveStatus } from "@/types/log";
 import { updateBrief } from "@/lib/briefApi";
-import { debounceSave, isOverWordLimit, wordCount } from "@/utils/completion";
+import { useDebouncedAutoSave, useSyncedFormState } from "@/hooks/useFormAutoSave";
+import { isOverWordLimit, wordCount } from "@/utils/completion";
 import { isRichTextEmpty } from "@/utils/richText";
 
 export function InnovationBriefForm({ brief, teamName, projectName, canEdit, canExport, exportMeta, onUpdated, backHref, backLabel, saveRedirectHref = "/dashboard" }: {
@@ -20,7 +21,7 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
   saveRedirectHref?: string;
 }) {
   const router = useRouter();
-  const [data, setData] = useState(brief);
+  const { data, setData, dataRef } = useSyncedFormState(brief);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
 
   const totalWords = useMemo(
@@ -32,20 +33,26 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
     BRIEF_QUESTIONS.some((q) => isOverWordLimit(String(data[q.id] || ""), q.maxWords)) ||
     totalWords > BRIEF_TOTAL_WORD_LIMIT;
 
-  const save = useCallback(async (redirectAfter = false) => {
-    if (hasErrors || !canEdit) return false;
+  const save = useCallback(async (redirectAfter = false, options?: { allowInvalid?: boolean }) => {
+    if (!canEdit) return false;
+
+    const current = dataRef.current;
+    const invalid =
+      BRIEF_QUESTIONS.some((q) => isOverWordLimit(String(current[q.id] || ""), q.maxWords)) ||
+      BRIEF_QUESTIONS.reduce((sum, q) => sum + wordCount(String(current[q.id] || "")), 0) > BRIEF_TOTAL_WORD_LIMIT;
+    if (!options?.allowInvalid && invalid) return false;
+
     setSaveStatus("saving");
     try {
       const payload: Record<string, string> = {};
-      BRIEF_QUESTIONS.forEach((q) => { payload[q.id] = String(data[q.id] || ""); });
+      BRIEF_QUESTIONS.forEach((q) => { payload[q.id] = String(current[q.id] || ""); });
       const updated = await updateBrief(brief.team, payload as Partial<InnovationBrief>);
-      setData((prev) => ({
-        ...prev,
-        completion_count: updated.completion_count,
-        completion_rate: updated.completion_rate,
-        updated_at: updated.updated_at,
-      }));
-      onUpdated({ ...updated, ...Object.fromEntries(BRIEF_QUESTIONS.map((q) => [q.id, data[q.id]])) });
+      const merged = {
+        ...updated,
+        ...Object.fromEntries(BRIEF_QUESTIONS.map((q) => [q.id, current[q.id]])),
+      };
+      setData(merged);
+      onUpdated(merged);
       if (redirectAfter) {
         router.push(saveRedirectHref);
         return true;
@@ -57,9 +64,9 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
       setSaveStatus("failed");
       return false;
     }
-  }, [data, brief.team, hasErrors, canEdit, onUpdated, router, saveRedirectHref]);
+  }, [brief.team, canEdit, dataRef, onUpdated, router, saveRedirectHref, setData]);
 
-  const debouncedSave = useMemo(() => debounceSave(save, 1500), [save]);
+  const scheduleAutoSave = useDebouncedAutoSave(save);
 
   return (
     <div>
@@ -128,7 +135,7 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
                 labelEn="" labelZh="" helper={q.helper}
                 value={val} maxWords={q.maxWords}
                 onChange={(v) => { setData((prev) => ({ ...prev, [q.id]: v })); }}
-                onBlurSave={() => debouncedSave()}
+                onBlurSave={() => scheduleAutoSave()}
                 disabled={!canEdit}
                 large
                 error={overSection ? "Word limit exceeded" : undefined}
