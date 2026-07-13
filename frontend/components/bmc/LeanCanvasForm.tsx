@@ -9,6 +9,7 @@ import type { SaveStatus } from "@/types/log";
 import { updateLeanCanvas } from "@/lib/bmcApi";
 import { getErrorMessage } from "@/lib/apiClient";
 import { useDebouncedAutoSave, useSyncedFormState } from "@/hooks/useFormAutoSave";
+import { useSaveMutex } from "@/hooks/useSaveMutex";
 import { isOverWordLimit } from "@/utils/completion";
 import { buildTextFormPayload } from "@/utils/formPayload";
 import { isRichTextEmpty } from "@/utils/richText";
@@ -39,7 +40,7 @@ export function LeanCanvasForm({
 
   const hasErrors = BMC_QUESTIONS.some((q) => isOverWordLimit(String(data[q.id] || ""), q.maxWords));
 
-  const save = useCallback(
+  const saveRaw = useCallback(
     async (redirectAfter = false, options?: { allowInvalid?: boolean }) => {
       if (!canEdit) return false;
 
@@ -79,6 +80,7 @@ export function LeanCanvasForm({
     [canvas.team, canEdit, dataRef, onUpdated, router, saveRedirectHref, setData]
   );
 
+  const save = useSaveMutex(saveRaw);
   const { scheduleAutoSave } = useDebouncedAutoSave(save);
 
   return (

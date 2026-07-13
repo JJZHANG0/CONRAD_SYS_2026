@@ -11,6 +11,7 @@ import type { SaveStatus } from "@/types/log";
 import { updateBrief } from "@/lib/briefApi";
 import { getErrorMessage } from "@/lib/apiClient";
 import { useDebouncedAutoSave, useSyncedFormState } from "@/hooks/useFormAutoSave";
+import { useSaveMutex } from "@/hooks/useSaveMutex";
 import { isOverWordLimit, wordCount } from "@/utils/completion";
 import { buildTextFormPayload } from "@/utils/formPayload";
 import { isRichTextEmpty } from "@/utils/richText";
@@ -36,7 +37,7 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
     BRIEF_QUESTIONS.some((q) => isOverWordLimit(String(data[q.id] || ""), q.maxWords)) ||
     totalWords > BRIEF_TOTAL_WORD_LIMIT;
 
-  const save = useCallback(async (redirectAfter = false, options?: { allowInvalid?: boolean }) => {
+  const saveRaw = useCallback(async (redirectAfter = false, options?: { allowInvalid?: boolean }) => {
     if (!canEdit) return false;
 
     const current = dataRef.current;
@@ -73,6 +74,7 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
     }
   }, [brief.team, canEdit, dataRef, onUpdated, router, saveRedirectHref, setData]);
 
+  const save = useSaveMutex(saveRaw);
   const { scheduleAutoSave } = useDebouncedAutoSave(save);
 
   const handleManualSave = () => {

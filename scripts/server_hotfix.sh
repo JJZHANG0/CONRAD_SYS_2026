@@ -16,6 +16,8 @@ python manage.py migrate --noinput
 python manage.py repair_form_text_fields
 
 echo "==> Restart backend..."
+cp "$APP_DIR/deploy/conrad-backend.service" /etc/systemd/system/
+systemctl daemon-reload
 systemctl restart conrad-backend
 sleep 2
 

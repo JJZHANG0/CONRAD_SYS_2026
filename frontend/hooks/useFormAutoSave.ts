@@ -21,7 +21,7 @@ export function useDebouncedAutoSave(
   const scheduleAutoSave = useCallback(
     (immediate = false) => {
       if (timerRef.current) clearTimeout(timerRef.current);
-      const wait = immediate ? 200 : delay;
+      const wait = immediate ? 500 : delay;
       timerRef.current = setTimeout(runSave, wait);
     },
     [delay, runSave]

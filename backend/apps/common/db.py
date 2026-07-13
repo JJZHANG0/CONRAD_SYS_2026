@@ -20,7 +20,7 @@ def configure_sqlite(sender, connection, **kwargs):
 connection_created.connect(configure_sqlite)
 
 
-def run_with_db_retry(action, retries=5, base_delay=0.15):
+def run_with_db_retry(action, retries=10, base_delay=0.25):
     last_error = None
     for attempt in range(retries):
         try:
