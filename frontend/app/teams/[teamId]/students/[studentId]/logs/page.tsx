@@ -75,8 +75,13 @@ function StudentLogsContent() {
       pageTitle={`${studentName}'s Daily Logs`}
       pageSubtitle={
         logMode === "operations"
-          ? `${teamName} · 只读浏览 · View only`
+          ? `${teamName} · 只读浏览 · 可导出当日 Log 文本`
           : `${teamName} · Review and add teacher comments · 查看日志并填写评语`
+      }
+      exportMeta={
+        logMode === "operations"
+          ? { studentName, teamName }
+          : undefined
       }
     />
   );

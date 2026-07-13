@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Card, TextArea, SaveIndicator, Button, StatusBadge } from "@/components/ui";
 import { LOG_FIELDS, type DailyLog, type SaveStatus } from "@/types/log";
+import { LogExportButton } from "@/components/logs/LogExportModal";
 import { updateLog } from "@/lib/logApi";
 import { debounceSave, isOverLimit } from "@/utils/completion";
 import { isRichTextEmpty } from "@/utils/richText";
@@ -20,6 +21,7 @@ interface Props {
   pageTitle?: string;
   pageSubtitle?: string;
   saveRedirectHref?: string;
+  exportMeta?: { studentName: string; teamName: string };
 }
 
 export function DailyLogEditor({
@@ -32,6 +34,7 @@ export function DailyLogEditor({
   pageTitle,
   pageSubtitle,
   saveRedirectHref = "/dashboard",
+  exportMeta,
 }: Props) {
   const router = useRouter();
   const [day, setDay] = useState(initialDay);
@@ -134,6 +137,16 @@ export function DailyLogEditor({
               <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
                 只读浏览
               </span>
+            )}
+            {isReadOnly && exportMeta && (
+              <LogExportButton
+                log={log}
+                meta={{
+                  studentName: exportMeta.studentName,
+                  teamName: exportMeta.teamName,
+                  day: log.day,
+                }}
+              />
             )}
             {isReadOnly ? null : <SaveIndicator status={saveStatus} />}
             <span className="rounded-full bg-primary-light px-3 py-1 text-xs font-medium text-primary">
