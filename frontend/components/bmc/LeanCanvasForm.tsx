@@ -4,8 +4,10 @@ import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, TextArea, SaveIndicator, Button, ProgressBar } from "@/components/ui";
+import { BmcExportButtons } from "@/components/bmc/BmcExportButtons";
 import { ModuleOpsTools, reviewCardClass } from "@/components/forms/ModuleOpsTools";
 import { BMC_QUESTIONS, type LeanCanvas } from "@/types/bmc";
+import type { BmcExportMeta } from "@/utils/bmcExport";
 import type { SaveStatus } from "@/types/log";
 import type { FieldReviewStatus } from "@/types/review";
 import { updateLeanCanvas, updateLeanCanvasReview } from "@/lib/bmcApi";
@@ -22,7 +24,9 @@ export function LeanCanvasForm({
   teamName,
   projectName,
   canEdit,
+  canExport,
   canReview,
+  exportMeta,
   onUpdated,
   backHref,
   backLabel,
@@ -32,7 +36,9 @@ export function LeanCanvasForm({
   teamName: string;
   projectName: string;
   canEdit: boolean;
+  canExport?: boolean;
   canReview?: boolean;
+  exportMeta?: BmcExportMeta;
   onUpdated: (c: LeanCanvas) => void;
   backHref?: string;
   backLabel?: string;
@@ -157,6 +163,12 @@ export function LeanCanvasForm({
           </div>
         </div>
       </Card>
+
+      {canExport && exportMeta && (
+        <div className="mb-6">
+          <BmcExportButtons canvas={data} meta={exportMeta} />
+        </div>
+      )}
 
       <div className="space-y-4">
         {BMC_QUESTIONS.map((q) => {
