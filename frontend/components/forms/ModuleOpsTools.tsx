@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
 import { Button } from "@/components/ui";
-import { translateText } from "@/lib/translateApi";
-import { getErrorMessage } from "@/lib/apiClient";
+import { openGoogleTranslatePage, translateText } from "@/lib/translateApi";
 import { stripHtml } from "@/utils/richText";
 import type { FieldReviewStatus } from "@/types/review";
 
@@ -61,8 +60,10 @@ export function ModuleOpsTools({
     try {
       const result = await translateText(htmlContent);
       setTranslated(result);
-    } catch (err) {
-      setTranslateError(getErrorMessage(err));
+    } catch {
+      setTranslateError(
+        "浏览器无法自动翻译（网络可能未连通 Google）。可点下方「用谷歌翻译打开」查看中文。"
+      );
     } finally {
       setTranslating(false);
     }
@@ -196,6 +197,14 @@ export function ModuleOpsTools({
               <Button variant="secondary" onClick={() => setTranslateOpen(false)}>
                 关闭
               </Button>
+              {(translateError || !translated) && !translating && (
+                <Button
+                  variant="secondary"
+                  onClick={() => openGoogleTranslatePage(htmlContent)}
+                >
+                  用谷歌翻译打开
+                </Button>
+              )}
               <Button onClick={() => void handleCopy()} disabled={!translated || translating}>
                 {copied ? "已复制 ✓" : "一键复制中文"}
               </Button>
