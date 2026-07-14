@@ -29,7 +29,13 @@ class TranslateView(APIView):
             translated = translate_en_to_zh(text)
         except RuntimeError as exc:
             return Response(
-                {"detail": str(exc)},
+                {
+                    "detail": (
+                        str(exc)
+                        if "所有翻译服务" in str(exc)
+                        else f"翻译服务暂时不可用，请确认浏览器可访问外网或配置百度翻译 API。 ({exc})"
+                    )
+                },
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 

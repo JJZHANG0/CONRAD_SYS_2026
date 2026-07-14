@@ -132,6 +132,12 @@ SPECTACULAR_SETTINGS = {
 STUDENTS_CAN_EDIT_BRIEF = True
 STUDENTS_CAN_EDIT_BMC = True
 
+# Optional: Baidu Translate API (recommended for Aliyun production — free tier available)
+# Register at https://fanyi-api.baidu.com/ then set in server .env
+BAIDU_TRANSLATE_APP_ID = os.getenv("BAIDU_TRANSLATE_APP_ID", "")
+BAIDU_TRANSLATE_SECRET = os.getenv("BAIDU_TRANSLATE_SECRET", "")
+TRANSLATE_REQUEST_TIMEOUT = int(os.getenv("TRANSLATE_REQUEST_TIMEOUT", "12"))
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
