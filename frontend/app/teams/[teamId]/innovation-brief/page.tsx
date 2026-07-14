@@ -71,6 +71,7 @@ function BriefContent() {
 
   const canEdit = user?.role === "teacher" || user?.role === "student";
   const canExport = user?.role === "operations";
+  const canReview = user?.role === "operations";
 
   return (
     <InnovationBriefForm
@@ -79,6 +80,7 @@ function BriefContent() {
       projectName={projectName}
       canEdit={canEdit}
       canExport={canExport}
+      canReview={canReview}
       exportMeta={{
         teamName,
         projectName,

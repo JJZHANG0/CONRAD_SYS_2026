@@ -1,3 +1,5 @@
+import type { FieldReviewsMap } from "./review";
+
 export interface LeanCanvas {
   id: number;
   team: number;
@@ -13,13 +15,17 @@ export interface LeanCanvas {
   early_adopters: string;
   cost_structure: string;
   revenue_streams: string;
+  field_reviews?: FieldReviewsMap;
   completion_count: number;
   completion_rate: number;
   updated_at: string;
 }
 
 export interface BmcQuestionDef {
-  id: keyof Omit<LeanCanvas, "id" | "team" | "completion_count" | "completion_rate" | "updated_at">;
+  id: keyof Omit<
+    LeanCanvas,
+    "id" | "team" | "field_reviews" | "completion_count" | "completion_rate" | "updated_at"
+  >;
   q: number;
   titleEn: string;
   titleZh: string;

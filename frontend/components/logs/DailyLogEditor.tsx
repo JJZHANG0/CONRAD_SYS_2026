@@ -211,7 +211,17 @@ export function DailyLogEditor({
                   Last updated {new Date(log.updated_at).toLocaleString()}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {isReadOnly && exportMeta && (
+                  <LogExportButton
+                    log={log}
+                    meta={{
+                      studentName: exportMeta.studentName,
+                      teamName: exportMeta.teamName,
+                      day: log.day,
+                    }}
+                  />
+                )}
                 <StatusBadge status={log.is_complete ? "complete" : "incomplete"} />
                 <StatusBadge status={log.has_teacher_comment ? "commented" : "pending"} />
               </div>

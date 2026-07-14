@@ -4,21 +4,25 @@ import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, TextArea, SaveIndicator, Button, ProgressBar } from "@/components/ui";
+import { ModuleOpsTools, reviewCardClass } from "@/components/forms/ModuleOpsTools";
 import { BMC_QUESTIONS, type LeanCanvas } from "@/types/bmc";
 import type { SaveStatus } from "@/types/log";
-import { updateLeanCanvas } from "@/lib/bmcApi";
+import type { FieldReviewStatus } from "@/types/review";
+import { updateLeanCanvas, updateLeanCanvasReview } from "@/lib/bmcApi";
 import { getErrorMessage } from "@/lib/apiClient";
 import { useDebouncedAutoSave, useSyncedFormState } from "@/hooks/useFormAutoSave";
 import { useSaveMutex } from "@/hooks/useSaveMutex";
 import { isOverWordLimit } from "@/utils/completion";
 import { buildSingleFieldPayload, buildTextFormPayload } from "@/utils/formPayload";
 import { isRichTextEmpty, sanitizeRichTextHtml } from "@/utils/richText";
+import clsx from "clsx";
 
 export function LeanCanvasForm({
   canvas,
   teamName,
   projectName,
   canEdit,
+  canReview,
   onUpdated,
   backHref,
   backLabel,
@@ -28,6 +32,7 @@ export function LeanCanvasForm({
   teamName: string;
   projectName: string;
   canEdit: boolean;
+  canReview?: boolean;
   onUpdated: (c: LeanCanvas) => void;
   backHref?: string;
   backLabel?: string;
@@ -90,6 +95,16 @@ export function LeanCanvasForm({
   const save = useSaveMutex(saveRaw);
   const { scheduleAutoSave } = useDebouncedAutoSave(save);
 
+  const handleReviewChange = async (field: string, status: FieldReviewStatus) => {
+    const updated = await updateLeanCanvasReview(canvas.team, field, status);
+    setData((prev) => ({ ...prev, field_reviews: updated.field_reviews || {} }));
+    onUpdated({ ...dataRef.current, field_reviews: updated.field_reviews || {} });
+  };
+
+  const reviews = data.field_reviews || {};
+  const passCount = Object.values(reviews).filter((s) => s === "pass").length;
+  const failCount = Object.values(reviews).filter((s) => s === "fail").length;
+
   return (
     <div>
       {backHref && (
@@ -122,6 +137,14 @@ export function LeanCanvasForm({
                 只读浏览
               </span>
             )}
+            {canReview && (
+              <p className="mb-2 text-xs text-text-secondary">
+                评审：
+                <span className="ml-1 font-medium text-emerald-700">{passCount} 合格</span>
+                <span className="mx-1 text-border">·</span>
+                <span className="font-medium text-rose-700">{failCount} 不合格</span>
+              </p>
+            )}
             {canEdit && <SaveIndicator status={saveStatus} />}
             <p className="mt-1 text-sm font-medium">{data.completion_count} / 12 completed</p>
             <ProgressBar value={data.completion_count} max={12} />
@@ -140,8 +163,13 @@ export function LeanCanvasForm({
           const val = String(data[q.id] || "");
           const done = !isRichTextEmpty(val);
           const overSection = isOverWordLimit(val, q.maxWords);
+          const review = reviews[q.id];
           return (
-            <Card key={q.id} borderTop={done ? "yellow" : "blue"} className="!p-5">
+            <Card
+              key={q.id}
+              borderTop={done ? "yellow" : "blue"}
+              className={clsx("!p-5", canReview && reviewCardClass(review))}
+            >
               <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-yellow-50 text-sm font-bold text-amber-700">
@@ -152,10 +180,33 @@ export function LeanCanvasForm({
                     <p className="text-xs text-text-secondary">{q.titleZh}</p>
                   </div>
                 </div>
-                <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-text-secondary">
-                  {q.maxWords} words max
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-text-secondary">
+                    {q.maxWords} words max
+                  </span>
+                  {canReview && review === "pass" && (
+                    <span className="rounded-full bg-emerald-500 px-2.5 py-0.5 text-xs font-semibold text-white">
+                      合格
+                    </span>
+                  )}
+                  {canReview && review === "fail" && (
+                    <span className="rounded-full bg-rose-500 px-2.5 py-0.5 text-xs font-semibold text-white">
+                      不合格
+                    </span>
+                  )}
+                </div>
               </div>
+              {canReview && (
+                <div className="mb-3">
+                  <ModuleOpsTools
+                    titleEn={q.titleEn}
+                    titleZh={q.titleZh}
+                    htmlContent={val}
+                    reviewStatus={review || null}
+                    onReviewChange={(status) => handleReviewChange(q.id, status)}
+                  />
+                </div>
+              )}
               <p className="mb-2 text-xs text-text-secondary">{q.helper}</p>
               <p className="mb-3 text-xs text-text-secondary/80">{q.helperZh}</p>
               <TextArea

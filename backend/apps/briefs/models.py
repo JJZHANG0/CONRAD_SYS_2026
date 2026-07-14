@@ -42,6 +42,8 @@ class InnovationBrief(models.Model):
     go_to_market = models.TextField(blank=True, default="")
     business_model = models.TextField(blank=True, default="")
     fundraising = models.TextField(blank=True, default="")
+    # Ops review map: { "elevator_pitch": "pass"|"fail", ... }
+    field_reviews = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

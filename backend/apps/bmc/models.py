@@ -45,6 +45,8 @@ class LeanCanvas(models.Model):
     early_adopters = models.TextField(blank=True, default="")
     cost_structure = models.TextField(blank=True, default="")
     revenue_streams = models.TextField(blank=True, default="")
+    # Ops review map: { "problem": "pass"|"fail", ... }
+    field_reviews = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

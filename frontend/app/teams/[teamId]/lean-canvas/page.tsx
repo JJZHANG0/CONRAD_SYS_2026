@@ -76,6 +76,7 @@ function LeanCanvasContent() {
   }
 
   const canEdit = user?.role === "teacher" || user?.role === "student";
+  const canReview = user?.role === "operations";
 
   return (
     <LeanCanvasForm
@@ -83,6 +84,7 @@ function LeanCanvasContent() {
       teamName={teamName}
       projectName={projectName}
       canEdit={canEdit}
+      canReview={canReview}
       onUpdated={setCanvas}
       backHref={backHref}
       backLabel={backLabel}

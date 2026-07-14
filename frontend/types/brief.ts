@@ -1,3 +1,5 @@
+import type { FieldReviewsMap } from "./review";
+
 export interface InnovationBrief {
   id: number;
   team: number;
@@ -11,13 +13,17 @@ export interface InnovationBrief {
   go_to_market: string;
   business_model: string;
   fundraising: string;
+  field_reviews?: FieldReviewsMap;
   completion_count: number;
   completion_rate: number;
   updated_at: string;
 }
 
 export interface BriefQuestionDef {
-  id: keyof Omit<InnovationBrief, "id" | "team" | "completion_count" | "completion_rate" | "updated_at">;
+  id: keyof Omit<
+    InnovationBrief,
+    "id" | "team" | "field_reviews" | "completion_count" | "completion_rate" | "updated_at"
+  >;
   q: number;
   titleEn: string;
   titleZh: string;

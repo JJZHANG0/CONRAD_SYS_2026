@@ -3,12 +3,15 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import clsx from "clsx";
 import { Card, TextArea, SaveIndicator, Button, ProgressBar } from "@/components/ui";
 import { BriefExportButtons } from "@/components/brief/BriefExportButtons";
+import { ModuleOpsTools, reviewCardClass } from "@/components/forms/ModuleOpsTools";
 import { BRIEF_QUESTIONS, BRIEF_TOTAL_WORD_LIMIT, type InnovationBrief } from "@/types/brief";
 import type { BriefExportMeta } from "@/utils/briefExport";
 import type { SaveStatus } from "@/types/log";
-import { updateBrief } from "@/lib/briefApi";
+import type { FieldReviewStatus } from "@/types/review";
+import { updateBrief, updateBriefReview } from "@/lib/briefApi";
 import { getErrorMessage } from "@/lib/apiClient";
 import { useDebouncedAutoSave, useSyncedFormState } from "@/hooks/useFormAutoSave";
 import { useSaveMutex } from "@/hooks/useSaveMutex";
@@ -16,9 +19,9 @@ import { isOverWordLimit, wordCount } from "@/utils/completion";
 import { buildSingleFieldPayload, buildTextFormPayload } from "@/utils/formPayload";
 import { isRichTextEmpty, sanitizeRichTextHtml } from "@/utils/richText";
 
-export function InnovationBriefForm({ brief, teamName, projectName, canEdit, canExport, exportMeta, onUpdated, backHref, backLabel, saveRedirectHref = "/dashboard" }: {
+export function InnovationBriefForm({ brief, teamName, projectName, canEdit, canExport, canReview, exportMeta, onUpdated, backHref, backLabel, saveRedirectHref = "/dashboard" }: {
   brief: InnovationBrief; teamName: string; projectName: string;
-  canEdit: boolean; canExport?: boolean; exportMeta?: BriefExportMeta;
+  canEdit: boolean; canExport?: boolean; canReview?: boolean; exportMeta?: BriefExportMeta;
   onUpdated: (b: InnovationBrief) => void;
   backHref?: string; backLabel?: string;
   saveRedirectHref?: string;
@@ -88,6 +91,16 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
     void save(true, { allowInvalid: true });
   };
 
+  const handleReviewChange = async (field: string, status: FieldReviewStatus) => {
+    const updated = await updateBriefReview(brief.team, field, status);
+    setData((prev) => ({ ...prev, field_reviews: updated.field_reviews || {} }));
+    onUpdated({ ...dataRef.current, field_reviews: updated.field_reviews || {} });
+  };
+
+  const reviews = data.field_reviews || {};
+  const passCount = Object.values(reviews).filter((s) => s === "pass").length;
+  const failCount = Object.values(reviews).filter((s) => s === "fail").length;
+
   return (
     <div>
       {backHref && (
@@ -116,6 +129,14 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
                 只读浏览
               </span>
             )}
+            {canReview && (
+              <p className="mb-2 text-xs text-text-secondary">
+                评审：
+                <span className="ml-1 font-medium text-emerald-700">{passCount} 合格</span>
+                <span className="mx-1 text-border">·</span>
+                <span className="font-medium text-rose-700">{failCount} 不合格</span>
+              </p>
+            )}
             {canEdit && <SaveIndicator status={saveStatus} />}
             <p className="mt-1 text-sm font-medium">{data.completion_count} / 10 completed</p>
             <ProgressBar value={data.completion_count} max={10} />
@@ -143,8 +164,13 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
           const val = String(data[q.id] || "");
           const done = !isRichTextEmpty(val);
           const overSection = isOverWordLimit(val, q.maxWords);
+          const review = reviews[q.id];
           return (
-            <Card key={q.id} borderTop={done ? "purple" : "yellow"} className="!p-5">
+            <Card
+              key={q.id}
+              borderTop={done ? "purple" : "yellow"}
+              className={clsx("!p-5", canReview && reviewCardClass(review))}
+            >
               <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-50 text-sm font-bold text-accent-purple">Q{q.q}</span>
@@ -153,10 +179,33 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
                     <p className="text-xs text-text-secondary">{q.titleZh}</p>
                   </div>
                 </div>
-                <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-text-secondary">
-                  {q.maxWords} words max
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-text-secondary">
+                    {q.maxWords} words max
+                  </span>
+                  {canReview && review === "pass" && (
+                    <span className="rounded-full bg-emerald-500 px-2.5 py-0.5 text-xs font-semibold text-white">
+                      合格
+                    </span>
+                  )}
+                  {canReview && review === "fail" && (
+                    <span className="rounded-full bg-rose-500 px-2.5 py-0.5 text-xs font-semibold text-white">
+                      不合格
+                    </span>
+                  )}
+                </div>
               </div>
+              {canReview && (
+                <div className="mb-3">
+                  <ModuleOpsTools
+                    titleEn={q.titleEn}
+                    titleZh={q.titleZh}
+                    htmlContent={val}
+                    reviewStatus={review || null}
+                    onReviewChange={(status) => handleReviewChange(q.id, status)}
+                  />
+                </div>
+              )}
               <TextArea
                 key={q.id}
                 labelEn="" labelZh="" helper={q.helper}

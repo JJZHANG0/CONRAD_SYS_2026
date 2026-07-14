@@ -120,14 +120,21 @@ export function LogExportModal({ open, onClose, log, meta }: Props) {
 interface ExportButtonProps {
   log: DailyLog;
   meta: LogExportMeta;
+  className?: string;
 }
 
-export function LogExportButton({ log, meta }: ExportButtonProps) {
+export function LogExportButton({ log, meta, className }: ExportButtonProps) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
+      <Button
+        variant="primary"
+        size="sm"
+        className={className}
+        onClick={() => setOpen(true)}
+      >
+        <span aria-hidden="true">📋</span>
         导出当日 Log
       </Button>
       <LogExportModal open={open} onClose={() => setOpen(false)} log={log} meta={meta} />
