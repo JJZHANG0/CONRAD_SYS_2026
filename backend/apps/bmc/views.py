@@ -1,9 +1,11 @@
 from django.conf import settings
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.common.db import run_with_db_retry
 from apps.common.review_status import merge_field_review
 from apps.common.views import get_or_create_serialized, handle_form_database_errors, save_serialized_form
 from apps.teams.models import Team
@@ -54,7 +56,9 @@ class LeanCanvasView(APIView):
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
 
         def save():
-            canvas, _ = LeanCanvas.objects.get_or_create(team=team)
+            canvas, _ = run_with_db_retry(
+                lambda: LeanCanvas.objects.get_or_create(team=team)
+            )
             data = save_serialized_form(canvas, LeanCanvasSerializer, request.data)
             return Response(data)
 
@@ -75,14 +79,24 @@ class LeanCanvasReviewView(APIView):
             return Response({"detail": "field is required."}, status=status.HTTP_400_BAD_REQUEST)
 
         def save():
-            canvas, _ = LeanCanvas.objects.get_or_create(team=team)
             try:
-                canvas.field_reviews = merge_field_review(
-                    canvas.field_reviews, field, review_status, BMC_FIELDS
-                )
+                def persist_review():
+                    with transaction.atomic():
+                        canvas, _ = LeanCanvas.objects.get_or_create(team=team)
+                        canvas = LeanCanvas.objects.select_for_update().get(
+                            pk=canvas.pk
+                        )
+                        canvas.field_reviews = merge_field_review(
+                            canvas.field_reviews, field, review_status, BMC_FIELDS
+                        )
+                        canvas.save(
+                            update_fields=["field_reviews", "updated_at"]
+                        )
+                        return LeanCanvasSerializer(canvas).data
+
+                data = run_with_db_retry(persist_review)
             except ValueError as exc:
                 return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-            canvas.save(update_fields=["field_reviews", "updated_at"])
-            return Response(LeanCanvasSerializer(canvas).data)
+            return Response(data)
 
         return handle_form_database_errors(save)

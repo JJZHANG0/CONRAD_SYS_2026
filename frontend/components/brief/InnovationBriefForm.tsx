@@ -16,7 +16,7 @@ import { getErrorMessage } from "@/lib/apiClient";
 import { useDebouncedAutoSave, useSyncedFormState } from "@/hooks/useFormAutoSave";
 import { useSaveMutex } from "@/hooks/useSaveMutex";
 import { isOverWordLimit, wordCount } from "@/utils/completion";
-import { buildSingleFieldPayload, buildTextFormPayload } from "@/utils/formPayload";
+import { buildTextFormPayload } from "@/utils/formPayload";
 import { isRichTextEmpty, sanitizeRichTextHtml } from "@/utils/richText";
 
 export function InnovationBriefForm({ brief, teamName, projectName, canEdit, canExport, canReview, exportMeta, onUpdated, backHref, backLabel, saveRedirectHref = "/dashboard" }: {
@@ -30,7 +30,9 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
   const { data, setData, dataRef } = useSyncedFormState(brief);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [saveError, setSaveError] = useState("");
-  const pendingFieldRef = useRef<keyof InnovationBrief | null>(null);
+  const dirtyFieldsRef = useRef<
+    Set<(typeof BRIEF_QUESTIONS)[number]["id"]>
+  >(new Set());
 
   const totalWords = useMemo(
     () => BRIEF_QUESTIONS.reduce((sum, q) => sum + wordCount(String(data[q.id] || "")), 0),
@@ -50,23 +52,38 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
       BRIEF_QUESTIONS.reduce((sum, q) => sum + wordCount(String(current[q.id] || "")), 0) > BRIEF_TOTAL_WORD_LIMIT;
     if (!options?.allowInvalid && invalid) return false;
 
+    const dirtyFields = Array.from(dirtyFieldsRef.current);
+    if (!dirtyFields.length) {
+      if (redirectAfter) router.push(saveRedirectHref);
+      return true;
+    }
     setSaveStatus("saving");
     setSaveError("");
     try {
-      const fieldId = pendingFieldRef.current;
-      pendingFieldRef.current = null;
-      const payload =
-        !redirectAfter && fieldId
-          ? buildSingleFieldPayload(fieldId, current, sanitizeRichTextHtml)
-          : buildTextFormPayload(
-              BRIEF_QUESTIONS.map((q) => q.id),
-              current,
-              sanitizeRichTextHtml
-            );
+      const payload = buildTextFormPayload(
+        dirtyFields,
+        current,
+        sanitizeRichTextHtml
+      );
       const updated = await updateBrief(brief.team, payload as Partial<InnovationBrief>);
+      const latest = dataRef.current;
+      dirtyFields.forEach((field) => {
+        if (
+          sanitizeRichTextHtml(String(latest[field] || "")) ===
+          String(payload[field] || "")
+        ) {
+          dirtyFieldsRef.current.delete(field);
+        }
+      });
       const merged = {
         ...updated,
-        ...Object.fromEntries(BRIEF_QUESTIONS.map((q) => [q.id, current[q.id]])),
+        field_reviews: latest.field_reviews ?? updated.field_reviews,
+        ...Object.fromEntries(
+          Array.from(dirtyFieldsRef.current).map((field) => [
+            field,
+            latest[field],
+          ])
+        ),
       };
       setData(merged);
       onUpdated(merged);
@@ -92,9 +109,14 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
   };
 
   const handleReviewChange = async (field: string, status: FieldReviewStatus) => {
-    const updated = await updateBriefReview(brief.team, field, status);
-    setData((prev) => ({ ...prev, field_reviews: updated.field_reviews || {} }));
-    onUpdated({ ...dataRef.current, field_reviews: updated.field_reviews || {} });
+    setSaveError("");
+    try {
+      const updated = await updateBriefReview(brief.team, field, status);
+      setData((prev) => ({ ...prev, field_reviews: updated.field_reviews || {} }));
+      onUpdated({ ...dataRef.current, field_reviews: updated.field_reviews || {} });
+    } catch (err) {
+      setSaveError(getErrorMessage(err));
+    }
   };
 
   const reviews = data.field_reviews || {};
@@ -210,9 +232,11 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
                 key={q.id}
                 labelEn="" labelZh="" helper={q.helper}
                 value={val} maxWords={q.maxWords}
-                onChange={(v) => { setData((prev) => ({ ...prev, [q.id]: v })); }}
+                onChange={(v) => {
+                  dirtyFieldsRef.current.add(q.id);
+                  setData((prev) => ({ ...prev, [q.id]: v }));
+                }}
                 onBlurSave={() => {
-                  pendingFieldRef.current = q.id;
                   scheduleAutoSave(true);
                 }}
                 disabled={!canEdit}

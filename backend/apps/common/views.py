@@ -1,6 +1,6 @@
 import logging
 
-from django.db.utils import DatabaseError
+from django.db.utils import DatabaseError, IntegrityError, OperationalError
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -32,11 +32,23 @@ def handle_form_database_errors(action):
         return action()
     except ValidationError:
         raise
-    except DatabaseError as exc:
+    except IntegrityError as exc:
+        logger.warning("Database constraint error in form view: %s", exc)
+        return Response(
+            {"detail": "Conflicting update. Please reload and try again."},
+            status=status.HTTP_409_CONFLICT,
+        )
+    except OperationalError as exc:
         logger.warning("Database error in form view: %s", exc)
         return Response(
             {"detail": "Database is busy, please retry in a moment."},
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    except DatabaseError as exc:
+        logger.exception("Unexpected database error in form view", exc_info=exc)
+        return Response(
+            {"detail": "Database error while saving. Please contact support."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
     except Exception as exc:
         logger.exception("Unexpected error in form view", exc_info=exc)

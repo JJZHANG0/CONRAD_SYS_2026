@@ -1,4 +1,4 @@
-import { apiClient } from "./apiClient";
+import { apiClient, patchWithRetry } from "./apiClient";
 import type { DailyLog } from "@/types/log";
 
 export async function fetchMyLogs(): Promise<DailyLog[]> {
@@ -12,6 +12,5 @@ export async function fetchStudentLogs(teamId: number, studentId: number): Promi
 }
 
 export async function updateLog(logId: number, payload: Partial<DailyLog>): Promise<DailyLog> {
-  const { data } = await apiClient.patch(`/logs/${logId}/`, payload);
-  return data;
+  return patchWithRetry<DailyLog>(`/logs/${logId}/`, payload);
 }

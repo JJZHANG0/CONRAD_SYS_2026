@@ -15,7 +15,7 @@ import { getErrorMessage } from "@/lib/apiClient";
 import { useDebouncedAutoSave, useSyncedFormState } from "@/hooks/useFormAutoSave";
 import { useSaveMutex } from "@/hooks/useSaveMutex";
 import { isOverWordLimit } from "@/utils/completion";
-import { buildSingleFieldPayload, buildTextFormPayload } from "@/utils/formPayload";
+import { buildTextFormPayload } from "@/utils/formPayload";
 import { isRichTextEmpty, sanitizeRichTextHtml } from "@/utils/richText";
 import clsx from "clsx";
 
@@ -48,7 +48,9 @@ export function LeanCanvasForm({
   const { data, setData, dataRef } = useSyncedFormState(canvas);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [saveError, setSaveError] = useState("");
-  const pendingFieldRef = useRef<keyof LeanCanvas | null>(null);
+  const dirtyFieldsRef = useRef<
+    Set<(typeof BMC_QUESTIONS)[number]["id"]>
+  >(new Set());
 
   const hasErrors = BMC_QUESTIONS.some((q) => isOverWordLimit(String(data[q.id] || ""), q.maxWords));
 
@@ -62,23 +64,38 @@ export function LeanCanvasForm({
       );
       if (!options?.allowInvalid && invalid) return false;
 
+      const dirtyFields = Array.from(dirtyFieldsRef.current);
+      if (!dirtyFields.length) {
+        if (redirectAfter) router.push(saveRedirectHref);
+        return true;
+      }
       setSaveStatus("saving");
       setSaveError("");
       try {
-        const fieldId = pendingFieldRef.current;
-        pendingFieldRef.current = null;
-        const payload =
-          !redirectAfter && fieldId
-            ? buildSingleFieldPayload(fieldId, current, sanitizeRichTextHtml)
-            : buildTextFormPayload(
-                BMC_QUESTIONS.map((q) => q.id),
-                current,
-                sanitizeRichTextHtml
-              );
+        const payload = buildTextFormPayload(
+          dirtyFields,
+          current,
+          sanitizeRichTextHtml
+        );
         const updated = await updateLeanCanvas(canvas.team, payload as Partial<LeanCanvas>);
+        const latest = dataRef.current;
+        dirtyFields.forEach((field) => {
+          if (
+            sanitizeRichTextHtml(String(latest[field] || "")) ===
+            String(payload[field] || "")
+          ) {
+            dirtyFieldsRef.current.delete(field);
+          }
+        });
         const merged = {
           ...updated,
-          ...Object.fromEntries(BMC_QUESTIONS.map((q) => [q.id, current[q.id]])),
+          field_reviews: latest.field_reviews ?? updated.field_reviews,
+          ...Object.fromEntries(
+            Array.from(dirtyFieldsRef.current).map((field) => [
+              field,
+              latest[field],
+            ])
+          ),
         };
         setData(merged);
         onUpdated(merged);
@@ -102,9 +119,14 @@ export function LeanCanvasForm({
   const { scheduleAutoSave } = useDebouncedAutoSave(save);
 
   const handleReviewChange = async (field: string, status: FieldReviewStatus) => {
-    const updated = await updateLeanCanvasReview(canvas.team, field, status);
-    setData((prev) => ({ ...prev, field_reviews: updated.field_reviews || {} }));
-    onUpdated({ ...dataRef.current, field_reviews: updated.field_reviews || {} });
+    setSaveError("");
+    try {
+      const updated = await updateLeanCanvasReview(canvas.team, field, status);
+      setData((prev) => ({ ...prev, field_reviews: updated.field_reviews || {} }));
+      onUpdated({ ...dataRef.current, field_reviews: updated.field_reviews || {} });
+    } catch (err) {
+      setSaveError(getErrorMessage(err));
+    }
   };
 
   const reviews = data.field_reviews || {};
@@ -228,10 +250,10 @@ export function LeanCanvasForm({
                 value={val}
                 maxWords={q.maxWords}
                 onChange={(v) => {
+                  dirtyFieldsRef.current.add(q.id);
                   setData((prev) => ({ ...prev, [q.id]: v }));
                 }}
                 onBlurSave={() => {
-                  pendingFieldRef.current = q.id;
                   scheduleAutoSave(true);
                 }}
                 disabled={!canEdit}

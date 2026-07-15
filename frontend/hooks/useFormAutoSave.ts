@@ -22,24 +22,35 @@ export function useDebouncedAutoSave(
     (immediate = false) => {
       if (timerRef.current) clearTimeout(timerRef.current);
       const wait = immediate ? 500 : delay;
-      timerRef.current = setTimeout(runSave, wait);
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        runSave();
+      }, wait);
     },
     [delay, runSave]
   );
 
   const flushAutoSave = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
     runSave();
   }, [runSave]);
 
   useEffect(() => {
     const onLeave = () => flushAutoSave();
     window.addEventListener("beforeunload", onLeave);
+    window.addEventListener("pagehide", onLeave);
     return () => {
       window.removeEventListener("beforeunload", onLeave);
-      if (timerRef.current) clearTimeout(timerRef.current);
+      window.removeEventListener("pagehide", onLeave);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      // Next.js client navigation may unmount without blur/pagehide.
+      runSave();
     };
-  }, [flushAutoSave]);
+  }, [flushAutoSave, runSave]);
 
   return { scheduleAutoSave, flushAutoSave };
 }

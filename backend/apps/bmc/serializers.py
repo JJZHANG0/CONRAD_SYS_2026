@@ -35,6 +35,18 @@ class LeanCanvasSerializer(serializers.ModelSerializer):
     def get_completion_rate(self, obj):
         return obj.completion_rate
 
+    def update(self, instance, validated_data):
+        changed_fields = []
+        for field, value in validated_data.items():
+            if field in BMC_FIELDS:
+                setattr(instance, field, value)
+                changed_fields.append(field)
+        if changed_fields:
+            # Partial column update prevents simultaneous edits to different
+            # BMC modules from overwriting each other.
+            instance.save(update_fields=[*changed_fields, "updated_at"])
+        return instance
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         for field in BMC_FIELDS:

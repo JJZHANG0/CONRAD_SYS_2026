@@ -20,6 +20,28 @@ echo "==> Backend migrate + static..."
 cd "$APP_DIR/backend"
 source venv/bin/activate
 pip install -q gunicorn pysqlite3-binary -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+BACKEND_WAS_ACTIVE=0
+if systemctl is-active --quiet conrad-backend 2>/dev/null; then
+  BACKEND_WAS_ACTIVE=1
+  systemctl stop conrad-backend
+fi
+restore_backend_on_error() {
+  if [ "$BACKEND_WAS_ACTIVE" = "1" ]; then
+    systemctl start conrad-backend || true
+  fi
+}
+trap restore_backend_on_error ERR
+
+if [ -f db.sqlite3 ]; then
+  BACKUP_DIR="$APP_DIR/backups/$(date +%Y%m%d-%H%M%S)"
+  mkdir -p "$BACKUP_DIR"
+  cp -p db.sqlite3 "$BACKUP_DIR/db.sqlite3"
+  [ ! -f db.sqlite3-wal ] || cp -p db.sqlite3-wal "$BACKUP_DIR/db.sqlite3-wal"
+  [ ! -f db.sqlite3-shm ] || cp -p db.sqlite3-shm "$BACKUP_DIR/db.sqlite3-shm"
+  echo "==> Database backup: $BACKUP_DIR"
+fi
+
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput
 
@@ -38,6 +60,7 @@ sed -i 's/--workers 2/--workers 1/' /etc/systemd/system/conrad-backend.service
 systemctl daemon-reload
 systemctl enable conrad-backend conrad-frontend nginx
 systemctl restart conrad-backend conrad-frontend nginx
+trap - ERR
 
 echo ""
 echo "==> Service status:"

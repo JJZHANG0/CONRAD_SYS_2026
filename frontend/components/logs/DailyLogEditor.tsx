@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
@@ -8,8 +8,26 @@ import { Card, TextArea, SaveIndicator, Button, StatusBadge } from "@/components
 import { LOG_FIELDS, type DailyLog, type SaveStatus } from "@/types/log";
 import { LogExportButton } from "@/components/logs/LogExportModal";
 import { updateLog } from "@/lib/logApi";
-import { debounceSave, isOverLimit } from "@/utils/completion";
-import { isRichTextEmpty } from "@/utils/richText";
+import { getErrorMessage } from "@/lib/apiClient";
+import { useQueuedSave } from "@/hooks/useQueuedSave";
+import { isOverLimit } from "@/utils/completion";
+import {
+  clearLogDraft,
+  loadLogDraft,
+  storeLogDraft,
+} from "@/utils/logDraft";
+import { isRichTextEmpty, sanitizeRichTextHtml } from "@/utils/richText";
+
+type LogFields = Pick<
+  DailyLog,
+  "work_content" | "task_completion" | "problems_solutions" | "reflection" | "teacher_comment"
+>;
+type LogFieldKey = keyof LogFields;
+
+interface SaveRequest {
+  logId: number;
+  payload: Partial<LogFields>;
+}
 
 interface Props {
   logs: DailyLog[];
@@ -39,26 +57,43 @@ export function DailyLogEditor({
   const router = useRouter();
   const [day, setDay] = useState(initialDay);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [saveError, setSaveError] = useState("");
+  const [recoveredDraft, setRecoveredDraft] = useState(false);
   const log = logs.find((l) => l.day === day) || logs[0];
   const isReadOnly = mode === "operations";
 
-  const [fields, setFields] = useState({
+  const initialFields: LogFields = {
     work_content: log?.work_content || "",
     task_completion: log?.task_completion || "",
     problems_solutions: log?.problems_solutions || "",
     reflection: log?.reflection || "",
     teacher_comment: log?.teacher_comment || "",
-  });
+  };
+  const [fields, setFields] = useState<LogFields>(initialFields);
+  const fieldsRef = useRef<LogFields>(initialFields);
+  const dirtyByLogRef = useRef<Record<number, Set<LogFieldKey>>>({});
 
   useEffect(() => {
     if (log) {
-      setFields({
+      const serverFields: LogFields = {
         work_content: log.work_content,
         task_completion: log.task_completion,
         problems_solutions: log.problems_solutions,
         reflection: log.reflection,
         teacher_comment: log.teacher_comment,
+      };
+      const draft = loadLogDraft<LogFieldKey>(log.id);
+      const dirty = new Set<LogFieldKey>(draft?.dirty || []);
+      const next = { ...serverFields };
+      dirty.forEach((field) => {
+        if (draft?.fields[field] != null) next[field] = draft.fields[field];
       });
+      dirtyByLogRef.current[log.id] = dirty;
+      fieldsRef.current = next;
+      setFields(next);
+      setRecoveredDraft(dirty.size > 0);
+      setSaveError("");
+      setSaveStatus("idle");
     }
   }, [log?.id, day]);
 
@@ -67,42 +102,80 @@ export function DailyLogEditor({
     [fields]
   );
 
-  const save = useCallback(async (redirectAfter = false) => {
-    if (!log || hasErrors) return false;
+  const saveWorker = useCallback(async ({ logId, payload }: SaveRequest) => {
     setSaveStatus("saving");
+    setSaveError("");
     try {
-      const payload =
-        mode === "student"
-          ? {
-              work_content: fields.work_content,
-              task_completion: fields.task_completion,
-              problems_solutions: fields.problems_solutions,
-              reflection: fields.reflection,
-            }
-          : { teacher_comment: fields.teacher_comment };
-      const updated = await updateLog(log.id, payload);
+      const updated = await updateLog(logId, payload);
       onUpdated(updated);
-      if (redirectAfter) {
-        router.push(saveRedirectHref);
-        return true;
+      const draft = loadLogDraft<LogFieldKey>(logId);
+      if (draft) {
+        const dirty = new Set<LogFieldKey>(draft.dirty);
+        (Object.keys(payload) as LogFieldKey[]).forEach((field) => {
+          if (
+            sanitizeRichTextHtml(draft.fields[field] || "") ===
+            String(payload[field] || "")
+          ) {
+            dirty.delete(field);
+          }
+        });
+        dirtyByLogRef.current[logId] = dirty;
+        if (dirty.size) {
+          storeLogDraft(logId, draft.fields, dirty);
+        } else {
+          clearLogDraft(logId);
+          if (log?.id === logId) setRecoveredDraft(false);
+        }
       }
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 2000);
       return true;
-    } catch {
+    } catch (err) {
       setSaveStatus("failed");
+      setSaveError(getErrorMessage(err));
       return false;
     }
-  }, [log, fields, mode, hasErrors, onUpdated, router, saveRedirectHref]);
+  }, [log?.id, onUpdated]);
 
-  const debouncedSave = useMemo(() => debounceSave(save, 1500), [save]);
+  const enqueueSave = useQueuedSave(saveWorker);
 
-  const handleField = (key: string, value: string) => {
-    setFields((prev) => ({ ...prev, [key]: value }));
+  const handleField = (key: LogFieldKey, value: string) => {
+    const next = { ...fieldsRef.current, [key]: value };
+    fieldsRef.current = next;
+    setFields(next);
+    if (log) {
+      const dirty =
+        dirtyByLogRef.current[log.id] ||
+        (dirtyByLogRef.current[log.id] = new Set<LogFieldKey>());
+      dirty.add(key);
+      storeLogDraft(log.id, next, dirty);
+    }
   };
 
-  const handleFieldBlur = () => {
-    if (!isReadOnly) debouncedSave();
+  const saveCurrent = async (
+    field?: LogFieldKey,
+    redirectAfter = false
+  ): Promise<boolean> => {
+    if (!log || isReadOnly) return false;
+    const current = fieldsRef.current;
+    const payload: Partial<LogFields> = field
+      ? { [field]: sanitizeRichTextHtml(current[field]) }
+      : mode === "student"
+        ? {
+            work_content: sanitizeRichTextHtml(current.work_content),
+            task_completion: sanitizeRichTextHtml(current.task_completion),
+            problems_solutions: sanitizeRichTextHtml(current.problems_solutions),
+            reflection: sanitizeRichTextHtml(current.reflection),
+          }
+        : { teacher_comment: sanitizeRichTextHtml(current.teacher_comment) };
+
+    const saved = await enqueueSave({ logId: log.id, payload });
+    if (saved && redirectAfter) router.push(saveRedirectHref);
+    return saved;
+  };
+
+  const handleFieldBlur = (field: LogFieldKey) => {
+    if (!isReadOnly) void saveCurrent(field);
   };
 
   if (!log) return null;
@@ -149,6 +222,11 @@ export function DailyLogEditor({
               />
             )}
             {isReadOnly ? null : <SaveIndicator status={saveStatus} />}
+            {saveStatus === "failed" && (
+              <Button size="sm" variant="secondary" onClick={() => void saveCurrent()}>
+                重试保存
+              </Button>
+            )}
             <span className="rounded-full bg-primary-light px-3 py-1 text-xs font-medium text-primary">
               {completedCount}/5 logs complete
             </span>
@@ -159,6 +237,11 @@ export function DailyLogEditor({
             )}
           </div>
         </div>
+        {recoveredDraft && !isReadOnly && (
+          <p className="mt-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-xs text-blue-700">
+            已恢复上次未成功上传的本地草稿，离开输入框或点击保存后会重新提交。
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
@@ -253,7 +336,7 @@ export function DailyLogEditor({
                   value={fields[f.id]}
                   maxChars={f.maxChars}
                   onChange={(v) => handleField(f.id, v)}
-                  onBlurSave={handleFieldBlur}
+                  onBlurSave={() => handleFieldBlur(f.id)}
                   disabled={mode === "teacher" || isReadOnly}
                   large
                   error={
@@ -266,8 +349,14 @@ export function DailyLogEditor({
             ))}
 
             {mode === "student" && (
-              <div className="flex justify-end pt-1">
-                <Button onClick={() => save(true)} disabled={hasErrors}>
+              <div className="flex flex-wrap items-center justify-end gap-3 pt-1">
+                {hasErrors && (
+                  <p className="text-xs text-amber-600">
+                    部分内容超过建议字数，但仍可正常保存
+                  </p>
+                )}
+                {saveError && <p className="text-xs text-red-600">{saveError}</p>}
+                <Button onClick={() => void saveCurrent(undefined, true)}>
                   Save Log
                 </Button>
               </div>
@@ -296,7 +385,7 @@ export function DailyLogEditor({
                 value={fields.teacher_comment}
                 maxChars={800}
                 onChange={(v) => handleField("teacher_comment", v)}
-                onBlurSave={handleFieldBlur}
+                onBlurSave={() => handleFieldBlur("teacher_comment")}
                 disabled={mode === "student" || isReadOnly}
                 large
                 helper={
@@ -308,8 +397,11 @@ export function DailyLogEditor({
                 }
               />
               {mode === "teacher" && (
-                <div className="mt-4 flex items-center justify-between">
-                  <Button onClick={() => save(true)}>Save Comment</Button>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <Button onClick={() => void saveCurrent(undefined, true)}>Save Comment</Button>
+                    {saveError && <p className="mt-2 text-xs text-red-600">{saveError}</p>}
+                  </div>
                   {log.teacher_comment_updated_at && (
                     <p className="text-xs text-text-secondary">
                       Last updated:{" "}

@@ -130,6 +130,30 @@ echo "==> Using Python: $PYTHON_BIN ($($PYTHON_BIN --version))"
 
 git_sync
 
+BACKEND_WAS_ACTIVE=0
+if systemctl is-active --quiet conrad-backend 2>/dev/null; then
+  BACKEND_WAS_ACTIVE=1
+  echo "==> Stopping backend before database maintenance..."
+  systemctl stop conrad-backend
+fi
+
+restore_backend_on_error() {
+  if [ "$BACKEND_WAS_ACTIVE" = "1" ]; then
+    systemctl start conrad-backend || true
+  fi
+}
+trap restore_backend_on_error ERR
+
+DB_FILE="$APP_DIR/backend/db.sqlite3"
+if [ -f "$DB_FILE" ]; then
+  BACKUP_DIR="$APP_DIR/backups/$(date +%Y%m%d-%H%M%S)"
+  mkdir -p "$BACKUP_DIR"
+  cp -p "$DB_FILE" "$BACKUP_DIR/db.sqlite3"
+  [ ! -f "${DB_FILE}-wal" ] || cp -p "${DB_FILE}-wal" "$BACKUP_DIR/db.sqlite3-wal"
+  [ ! -f "${DB_FILE}-shm" ] || cp -p "${DB_FILE}-shm" "$BACKUP_DIR/db.sqlite3-shm"
+  echo "==> Database backup: $BACKUP_DIR"
+fi
+
 echo "==> Backend setup..."
 cd "$APP_DIR/backend"
 rm -rf venv
@@ -162,6 +186,7 @@ cp "$APP_DIR/deploy/conrad-frontend.service" /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable conrad-backend conrad-frontend nginx
 systemctl restart conrad-backend conrad-frontend
+trap - ERR
 
 echo "==> Configuring nginx..."
 cp "$APP_DIR/deploy/nginx.conrad.conf" /etc/nginx/conf.d/conrad.conf
