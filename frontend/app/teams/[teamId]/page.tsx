@@ -8,6 +8,7 @@ import { TeamHeader, TeamMemberCard } from "@/components/team";
 import { LoadingState, Button } from "@/components/ui";
 import { fetchTeam } from "@/lib/teamApi";
 import { getErrorMessage } from "@/lib/apiClient";
+import { useAuthStore } from "@/store/authStore";
 import type { TeamDetail } from "@/types/team";
 
 export default function TeamDetailPage() {
@@ -16,6 +17,7 @@ export default function TeamDetailPage() {
 
 function TeamContent() {
   const { teamId } = useParams();
+  const { user } = useAuthStore();
   const [team, setTeam] = useState<TeamDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -57,7 +59,10 @@ function TeamContent() {
 
   return (
     <div>
-      <TeamHeader team={team} />
+      <TeamHeader
+        team={team}
+        canExportTeamLogs={user?.role === "operations"}
+      />
       <h2 className="mb-4 text-lg font-semibold">Team Members</h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {team.members.map((m) => (

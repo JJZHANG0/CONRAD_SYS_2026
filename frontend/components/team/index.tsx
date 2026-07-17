@@ -2,9 +2,16 @@
 
 import Link from "next/link";
 import { Card, Button, ProgressBar, StatCard } from "@/components/ui";
+import { TeamLogsExportButton } from "@/components/team/TeamLogsExportButton";
 import type { TeamDetail } from "@/types/team";
 
-export function TeamHeader({ team }: { team: TeamDetail }) {
+export function TeamHeader({
+  team,
+  canExportTeamLogs = false,
+}: {
+  team: TeamDetail;
+  canExportTeamLogs?: boolean;
+}) {
   const s = team.stats;
   return (
     <Card className="mb-6">
@@ -22,6 +29,7 @@ export function TeamHeader({ team }: { team: TeamDetail }) {
             <Link href={`/teams/${team.id}/lean-canvas`}>
               <Button variant="secondary">Lean Canvas</Button>
             </Link>
+            {canExportTeamLogs && <TeamLogsExportButton team={team} />}
           </div>
       </div>
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
