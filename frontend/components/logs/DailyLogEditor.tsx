@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { Card, TextArea, SaveIndicator, Button, StatusBadge } from "@/components/ui";
 import { LOG_FIELDS, type DailyLog, type SaveStatus } from "@/types/log";
 import { LogExportButton } from "@/components/logs/LogExportModal";
+import { LogMinimumModal } from "@/components/logs/LogMinimumModal";
 import { updateLog } from "@/lib/logApi";
 import { getErrorMessage } from "@/lib/apiClient";
 import { useQueuedSave } from "@/hooks/useQueuedSave";
@@ -16,13 +17,20 @@ import {
   loadLogDraft,
   storeLogDraft,
 } from "@/utils/logDraft";
-import { isRichTextEmpty, sanitizeRichTextHtml } from "@/utils/richText";
+import {
+  getPlainTextLength,
+  isRichTextEmpty,
+  sanitizeRichTextHtml,
+} from "@/utils/richText";
 
 type LogFields = Pick<
   DailyLog,
   "work_content" | "task_completion" | "problems_solutions" | "reflection" | "teacher_comment"
 >;
 type LogFieldKey = keyof LogFields;
+type StudentLogField = (typeof LOG_FIELDS)[number]["id"];
+
+const MIN_LOG_CHARS = 100;
 
 interface SaveRequest {
   logId: number;
@@ -59,6 +67,10 @@ export function DailyLogEditor({
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [saveError, setSaveError] = useState("");
   const [recoveredDraft, setRecoveredDraft] = useState(false);
+  const [minimumPrompt, setMinimumPrompt] = useState<{
+    fieldLabel: string;
+    currentCount: number;
+  } | null>(null);
   const log = logs.find((l) => l.day === day) || logs[0];
   const isReadOnly = mode === "operations";
 
@@ -72,6 +84,7 @@ export function DailyLogEditor({
   const [fields, setFields] = useState<LogFields>(initialFields);
   const fieldsRef = useRef<LogFields>(initialFields);
   const dirtyByLogRef = useRef<Record<number, Set<LogFieldKey>>>({});
+  const originalByLogRef = useRef<Record<number, LogFields>>({});
 
   useEffect(() => {
     if (log) {
@@ -82,6 +95,9 @@ export function DailyLogEditor({
         reflection: log.reflection,
         teacher_comment: log.teacher_comment,
       };
+      if (!originalByLogRef.current[log.id]) {
+        originalByLogRef.current[log.id] = serverFields;
+      }
       const draft = loadLogDraft<LogFieldKey>(log.id);
       const dirty = new Set<LogFieldKey>(draft?.dirty || []);
       const next = { ...serverFields };
@@ -139,6 +155,34 @@ export function DailyLogEditor({
 
   const enqueueSave = useQueuedSave(saveWorker);
 
+  const findMinimumViolation = (
+    field?: LogFieldKey
+  ): { fieldLabel: string; currentCount: number } | null => {
+    if (mode !== "student" || !log) return null;
+    const studentFields: StudentLogField[] = field
+      ? LOG_FIELDS.some((item) => item.id === field)
+        ? [field as StudentLogField]
+        : []
+      : LOG_FIELDS.map((item) => item.id);
+
+    for (const key of studentFields) {
+      const current = fieldsRef.current[key] || "";
+      const count = getPlainTextLength(current);
+      const original = originalByLogRef.current[log.id]?.[key] || "";
+      const unchangedExisting =
+        getPlainTextLength(original) > 0 &&
+        sanitizeRichTextHtml(current) === sanitizeRichTextHtml(original);
+      if (count < MIN_LOG_CHARS && !unchangedExisting) {
+        const definition = LOG_FIELDS.find((item) => item.id === key);
+        return {
+          fieldLabel: definition?.labelZh || "日志内容",
+          currentCount: count,
+        };
+      }
+    }
+    return null;
+  };
+
   const handleField = (key: LogFieldKey, value: string) => {
     const next = { ...fieldsRef.current, [key]: value };
     fieldsRef.current = next;
@@ -157,6 +201,12 @@ export function DailyLogEditor({
     redirectAfter = false
   ): Promise<boolean> => {
     if (!log || isReadOnly) return false;
+    const violation = findMinimumViolation(field);
+    if (violation) {
+      setMinimumPrompt(violation);
+      setSaveStatus("idle");
+      return false;
+    }
     const current = fieldsRef.current;
     const payload: Partial<LogFields> = field
       ? { [field]: sanitizeRichTextHtml(current[field]) }
@@ -185,6 +235,13 @@ export function DailyLogEditor({
 
   return (
     <div className="w-full">
+      <LogMinimumModal
+        open={minimumPrompt !== null}
+        fieldLabel={minimumPrompt?.fieldLabel || "日志内容"}
+        currentCount={minimumPrompt?.currentCount || 0}
+        minimum={MIN_LOG_CHARS}
+        onClose={() => setMinimumPrompt(null)}
+      />
       {/* Back + page header */}
       <div className="mb-6">
         {backHref && (

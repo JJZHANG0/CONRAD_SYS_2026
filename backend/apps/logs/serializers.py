@@ -1,3 +1,6 @@
+import html
+import re
+
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -8,6 +11,15 @@ from .models import DailyLog
 
 STUDENT_FIELDS = ("work_content", "task_completion", "problems_solutions", "reflection")
 TEACHER_FIELDS = ("teacher_comment",)
+MIN_STUDENT_LOG_CHARS = 100
+_TAG_RE = re.compile(r"<[^>]+>")
+_WHITESPACE_RE = re.compile(r"\s+")
+
+
+def plain_text_length(value):
+    text = _TAG_RE.sub(" ", value or "")
+    text = html.unescape(text)
+    return len(_WHITESPACE_RE.sub(" ", text).strip())
 
 
 class DailyLogSerializer(serializers.ModelSerializer):
@@ -40,6 +52,27 @@ class StudentLogUpdateSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         apply_safe_text_fields(self, STUDENT_FIELDS)
+
+    def validate(self, attrs):
+        errors = {}
+        for field, value in attrs.items():
+            if field not in STUDENT_FIELDS:
+                continue
+            current_count = plain_text_length(value)
+            original = getattr(self.instance, field, "") if self.instance else ""
+            unchanged_existing = (
+                plain_text_length(original) > 0
+                and sanitize_rich_text_html(value)
+                == sanitize_rich_text_html(original)
+            )
+            if current_count < MIN_STUDENT_LOG_CHARS and not unchanged_existing:
+                errors[field] = (
+                    f"不行～今天还学得不够多，需要至少写 "
+                    f"{MIN_STUDENT_LOG_CHARS} 字（当前 {current_count} 字）。"
+                )
+        if errors:
+            raise serializers.ValidationError(errors)
+        return attrs
 
     def update(self, instance, validated_data):
         changed_fields = []

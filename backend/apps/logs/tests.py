@@ -8,6 +8,7 @@ from .models import DailyLog
 from .serializers import StudentLogUpdateSerializer, TeacherCommentUpdateSerializer
 
 User = get_user_model()
+LONG_LOG_TEXT = "今天完成了项目调研、方案讨论和实践验证，并认真记录了遇到的问题与解决过程。" * 4
 
 
 class DailyLogSaveTests(APITestCase):
@@ -42,31 +43,69 @@ class DailyLogSaveTests(APITestCase):
 
         response = self.client.patch(
             self.url,
-            {"work_content": "<p>new work</p>"},
+            {"work_content": f"<p>{LONG_LOG_TEXT}</p>"},
             format="json",
         )
 
         self.assertEqual(response.status_code, 200)
         self.log.refresh_from_db()
-        self.assertEqual(self.log.work_content, "<p>new work</p>")
+        self.assertEqual(self.log.work_content, f"<p>{LONG_LOG_TEXT}</p>")
         self.assertEqual(self.log.task_completion, "<p>keep this plan</p>")
 
-    def test_student_input_is_sanitized_and_null_safe(self):
+    def test_student_input_is_sanitized(self):
         self.client.force_authenticate(self.student)
 
         response = self.client.patch(
             self.url,
             {
-                "work_content": '<span class="css-junk" data-copy="x">safe text</span>',
-                "reflection": None,
+                "work_content": (
+                    f'<span class="css-junk" data-copy="x">{LONG_LOG_TEXT}</span>'
+                ),
             },
             format="json",
         )
 
         self.assertEqual(response.status_code, 200)
         self.log.refresh_from_db()
-        self.assertEqual(self.log.work_content, "<p>safe text</p>")
-        self.assertEqual(self.log.reflection, "")
+        self.assertEqual(self.log.work_content, f"<p>{LONG_LOG_TEXT}</p>")
+
+    def test_new_or_empty_field_requires_one_hundred_characters(self):
+        self.client.force_authenticate(self.student)
+
+        response = self.client.patch(
+            self.url,
+            {"work_content": "<p>写得太少了</p>"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("至少写 100 字", str(response.data["work_content"][0]))
+
+    def test_unchanged_legacy_short_log_is_grandfathered(self):
+        self.log.work_content = "<p>这是以前保存的短日志</p>"
+        self.log.save(update_fields=["work_content"])
+        self.client.force_authenticate(self.student)
+
+        response = self.client.patch(
+            self.url,
+            {"work_content": "<p>这是以前保存的短日志</p>"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_edited_legacy_short_log_must_reach_minimum(self):
+        self.log.work_content = "<p>这是以前保存的短日志</p>"
+        self.log.save(update_fields=["work_content"])
+        self.client.force_authenticate(self.student)
+
+        response = self.client.patch(
+            self.url,
+            {"work_content": "<p>修改过但还是很短</p>"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
 
     def test_teacher_comment_updates_without_touching_student_content(self):
         self.log.work_content = "<p>student work</p>"
@@ -91,7 +130,7 @@ class DailyLogSaveTests(APITestCase):
 
         student_serializer = StudentLogUpdateSerializer(
             student_copy,
-            data={"work_content": "<p>student concurrent save</p>"},
+            data={"work_content": f"<p>{LONG_LOG_TEXT}</p>"},
             partial=True,
         )
         student_serializer.is_valid(raise_exception=True)
@@ -107,7 +146,7 @@ class DailyLogSaveTests(APITestCase):
 
         self.log.refresh_from_db()
         self.assertEqual(
-            self.log.work_content, "<p>student concurrent save</p>"
+            self.log.work_content, f"<p>{LONG_LOG_TEXT}</p>"
         )
         self.assertEqual(
             self.log.teacher_comment, "<p>teacher concurrent save</p>"
