@@ -19,9 +19,9 @@ import { isOverWordLimit, wordCount } from "@/utils/completion";
 import { buildTextFormPayload } from "@/utils/formPayload";
 import { isRichTextEmpty, sanitizeRichTextHtml } from "@/utils/richText";
 
-export function InnovationBriefForm({ brief, teamName, projectName, canEdit, canExport, canReview, exportMeta, onUpdated, backHref, backLabel, saveRedirectHref = "/dashboard" }: {
+export function InnovationBriefForm({ brief, teamName, projectName, canEdit, canExport, canTranslate, canReview, exportMeta, onUpdated, backHref, backLabel, saveRedirectHref = "/dashboard" }: {
   brief: InnovationBrief; teamName: string; projectName: string;
-  canEdit: boolean; canExport?: boolean; canReview?: boolean; exportMeta?: BriefExportMeta;
+  canEdit: boolean; canExport?: boolean; canTranslate?: boolean; canReview?: boolean; exportMeta?: BriefExportMeta;
   onUpdated: (b: InnovationBrief) => void;
   backHref?: string; backLabel?: string;
   saveRedirectHref?: string;
@@ -217,12 +217,13 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
                   )}
                 </div>
               </div>
-              {canReview && (
+              {(canTranslate || canReview) && (
                 <div className="mb-3">
                   <ModuleOpsTools
                     titleEn={q.titleEn}
                     titleZh={q.titleZh}
                     htmlContent={val}
+                    canReview={canReview}
                     reviewStatus={review || null}
                     onReviewChange={(status) => handleReviewChange(q.id, status)}
                   />

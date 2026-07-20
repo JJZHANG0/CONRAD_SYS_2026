@@ -25,6 +25,7 @@ export function LeanCanvasForm({
   projectName,
   canEdit,
   canExport,
+  canTranslate,
   canReview,
   exportMeta,
   onUpdated,
@@ -37,6 +38,7 @@ export function LeanCanvasForm({
   projectName: string;
   canEdit: boolean;
   canExport?: boolean;
+  canTranslate?: boolean;
   canReview?: boolean;
   exportMeta?: BmcExportMeta;
   onUpdated: (c: LeanCanvas) => void;
@@ -230,12 +232,13 @@ export function LeanCanvasForm({
                   )}
                 </div>
               </div>
-              {canReview && (
+              {(canTranslate || canReview) && (
                 <div className="mb-3">
                   <ModuleOpsTools
                     titleEn={q.titleEn}
                     titleZh={q.titleZh}
                     htmlContent={val}
+                    canReview={canReview}
                     reviewStatus={review || null}
                     onReviewChange={(status) => handleReviewChange(q.id, status)}
                   />

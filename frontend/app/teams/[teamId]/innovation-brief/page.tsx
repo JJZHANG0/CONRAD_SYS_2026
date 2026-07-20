@@ -71,6 +71,7 @@ function BriefContent() {
 
   const canEdit = user?.role === "teacher" || user?.role === "student";
   const canExport = user?.role === "operations";
+  const canTranslate = user?.role === "teacher" || user?.role === "operations";
   const canReview = user?.role === "operations";
 
   return (
@@ -80,6 +81,7 @@ function BriefContent() {
       projectName={projectName}
       canEdit={canEdit}
       canExport={canExport}
+      canTranslate={canTranslate}
       canReview={canReview}
       exportMeta={{
         teamName,

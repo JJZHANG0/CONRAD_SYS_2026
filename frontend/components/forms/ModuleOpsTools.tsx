@@ -11,14 +11,16 @@ interface Props {
   titleEn: string;
   titleZh: string;
   htmlContent: string;
+  canReview?: boolean;
   reviewStatus?: FieldReviewStatus;
-  onReviewChange: (status: FieldReviewStatus) => Promise<void>;
+  onReviewChange?: (status: FieldReviewStatus) => Promise<void>;
 }
 
 export function ModuleOpsTools({
   titleEn,
   titleZh,
   htmlContent,
+  canReview = false,
   reviewStatus,
   onReviewChange,
 }: Props) {
@@ -88,7 +90,7 @@ export function ModuleOpsTools({
   }, [translated]);
 
   const setReview = async (next: FieldReviewStatus) => {
-    if (reviewBusy) return;
+    if (reviewBusy || !canReview || !onReviewChange) return;
     setReviewBusy(true);
     try {
       // Toggle off if clicking the already-selected status
@@ -111,32 +113,36 @@ export function ModuleOpsTools({
         >
           {translating ? "翻译中…" : "译成中文"}
         </Button>
-        <button
-          type="button"
-          disabled={reviewBusy}
-          onClick={() => void setReview("pass")}
-          className={clsx(
-            "rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all",
-            reviewStatus === "pass"
-              ? "border-emerald-500 bg-emerald-500 text-white shadow-sm"
-              : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-          )}
-        >
-          合格
-        </button>
-        <button
-          type="button"
-          disabled={reviewBusy}
-          onClick={() => void setReview("fail")}
-          className={clsx(
-            "rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all",
-            reviewStatus === "fail"
-              ? "border-rose-500 bg-rose-500 text-white shadow-sm"
-              : "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
-          )}
-        >
-          不合格
-        </button>
+        {canReview && onReviewChange && (
+          <>
+            <button
+              type="button"
+              disabled={reviewBusy}
+              onClick={() => void setReview("pass")}
+              className={clsx(
+                "rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all",
+                reviewStatus === "pass"
+                  ? "border-emerald-500 bg-emerald-500 text-white shadow-sm"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+              )}
+            >
+              合格
+            </button>
+            <button
+              type="button"
+              disabled={reviewBusy}
+              onClick={() => void setReview("fail")}
+              className={clsx(
+                "rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all",
+                reviewStatus === "fail"
+                  ? "border-rose-500 bg-rose-500 text-white shadow-sm"
+                  : "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+              )}
+            >
+              不合格
+            </button>
+          </>
+        )}
       </div>
 
       {translateOpen && (
