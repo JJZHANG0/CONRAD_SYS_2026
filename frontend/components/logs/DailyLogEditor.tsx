@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
@@ -31,6 +31,16 @@ type LogFieldKey = keyof LogFields;
 type StudentLogField = (typeof LOG_FIELDS)[number]["id"];
 
 const MIN_LOG_CHARS = 100;
+
+function fieldsFromLog(log?: DailyLog): LogFields {
+  return {
+    work_content: log?.work_content || "",
+    task_completion: log?.task_completion || "",
+    problems_solutions: log?.problems_solutions || "",
+    reflection: log?.reflection || "",
+    teacher_comment: log?.teacher_comment || "",
+  };
+}
 
 interface SaveRequest {
   logId: number;
@@ -63,7 +73,10 @@ export function DailyLogEditor({
   exportMeta,
 }: Props) {
   const router = useRouter();
-  const [day, setDay] = useState(initialDay);
+  const firstDay = logs.some((item) => item.day === initialDay)
+    ? initialDay
+    : (logs[0]?.day ?? initialDay);
+  const [day, setDay] = useState(firstDay);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [saveError, setSaveError] = useState("");
   const [recoveredDraft, setRecoveredDraft] = useState(false);
@@ -71,47 +84,53 @@ export function DailyLogEditor({
     fieldLabel: string;
     currentCount: number;
   } | null>(null);
-  const log = logs.find((l) => l.day === day) || logs[0];
+  const log = logs.find((item) => item.day === day);
   const isReadOnly = mode === "operations";
 
-  const initialFields: LogFields = {
-    work_content: log?.work_content || "",
-    task_completion: log?.task_completion || "",
-    problems_solutions: log?.problems_solutions || "",
-    reflection: log?.reflection || "",
-    teacher_comment: log?.teacher_comment || "",
-  };
+  const initialFields = fieldsFromLog(log);
   const [fields, setFields] = useState<LogFields>(initialFields);
+  const [editorSession, setEditorSession] = useState(0);
   const fieldsRef = useRef<LogFields>(initialFields);
+  const fieldsByLogRef = useRef<Record<number, LogFields>>(
+    log ? { [log.id]: initialFields } : {}
+  );
   const dirtyByLogRef = useRef<Record<number, Set<LogFieldKey>>>({});
   const originalByLogRef = useRef<Record<number, LogFields>>({});
+  const activeLogIdRef = useRef<number | null>(log?.id ?? null);
+  const displayedLogIdRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    if (log) {
-      const serverFields: LogFields = {
-        work_content: log.work_content,
-        task_completion: log.task_completion,
-        problems_solutions: log.problems_solutions,
-        reflection: log.reflection,
-        teacher_comment: log.teacher_comment,
-      };
-      if (!originalByLogRef.current[log.id]) {
-        originalByLogRef.current[log.id] = serverFields;
-      }
-      const draft = loadLogDraft<LogFieldKey>(log.id);
-      const dirty = new Set<LogFieldKey>(draft?.dirty || []);
-      const next = { ...serverFields };
-      dirty.forEach((field) => {
-        if (draft?.fields[field] != null) next[field] = draft.fields[field];
-      });
-      dirtyByLogRef.current[log.id] = dirty;
-      fieldsRef.current = next;
-      setFields(next);
-      setRecoveredDraft(dirty.size > 0);
-      setSaveError("");
-      setSaveStatus("idle");
+  const displayLog = useCallback((targetLog: DailyLog) => {
+    const serverFields = fieldsFromLog(targetLog);
+    if (!originalByLogRef.current[targetLog.id]) {
+      originalByLogRef.current[targetLog.id] = serverFields;
     }
-  }, [log?.id, day]);
+    const draft = loadLogDraft<LogFieldKey>(targetLog.id);
+    const dirty = new Set<LogFieldKey>(draft?.dirty || []);
+    const next = { ...serverFields };
+    dirty.forEach((field) => {
+      if (draft?.fields[field] != null) next[field] = draft.fields[field];
+    });
+
+    activeLogIdRef.current = targetLog.id;
+    displayedLogIdRef.current = targetLog.id;
+    fieldsByLogRef.current[targetLog.id] = next;
+    dirtyByLogRef.current[targetLog.id] = dirty;
+    fieldsRef.current = next;
+    setFields(next);
+    // RichTextEditor is intentionally uncontrolled, so each log needs a fresh
+    // editor mount after its exact server/draft snapshot has been selected.
+    setEditorSession((value) => value + 1);
+    setRecoveredDraft(dirty.size > 0);
+    setMinimumPrompt(null);
+    setSaveError("");
+    setSaveStatus("idle");
+  }, []);
+
+  useLayoutEffect(() => {
+    if (log && displayedLogIdRef.current !== log.id) {
+      displayLog(log);
+    }
+  }, [displayLog, log]);
 
   const hasErrors = useMemo(
     () => LOG_FIELDS.some((f) => isOverLimit(fields[f.id], f.maxChars)),
@@ -119,11 +138,14 @@ export function DailyLogEditor({
   );
 
   const saveWorker = useCallback(async ({ logId, payload }: SaveRequest) => {
-    setSaveStatus("saving");
-    setSaveError("");
+    if (activeLogIdRef.current === logId) {
+      setSaveStatus("saving");
+      setSaveError("");
+    }
     try {
       const updated = await updateLog(logId, payload);
       onUpdated(updated);
+      originalByLogRef.current[logId] = fieldsFromLog(updated);
       const draft = loadLogDraft<LogFieldKey>(logId);
       if (draft) {
         const dirty = new Set<LogFieldKey>(draft.dirty);
@@ -140,25 +162,33 @@ export function DailyLogEditor({
           storeLogDraft(logId, draft.fields, dirty);
         } else {
           clearLogDraft(logId);
-          if (log?.id === logId) setRecoveredDraft(false);
+          if (activeLogIdRef.current === logId) setRecoveredDraft(false);
         }
       }
-      setSaveStatus("saved");
-      setTimeout(() => setSaveStatus("idle"), 2000);
+      if (activeLogIdRef.current === logId) {
+        setSaveStatus("saved");
+        setTimeout(() => {
+          if (activeLogIdRef.current === logId) setSaveStatus("idle");
+        }, 2000);
+      }
       return true;
     } catch (err) {
-      setSaveStatus("failed");
-      setSaveError(getErrorMessage(err));
+      if (activeLogIdRef.current === logId) {
+        setSaveStatus("failed");
+        setSaveError(getErrorMessage(err));
+      }
       return false;
     }
-  }, [log?.id, onUpdated]);
+  }, [onUpdated]);
 
   const enqueueSave = useQueuedSave(saveWorker);
 
   const findMinimumViolation = (
+    logId: number,
+    current: LogFields,
     field?: LogFieldKey
   ): { fieldLabel: string; currentCount: number } | null => {
-    if (mode !== "student" || !log) return null;
+    if (mode !== "student") return null;
     const studentFields: StudentLogField[] = field
       ? LOG_FIELDS.some((item) => item.id === field)
         ? [field as StudentLogField]
@@ -166,12 +196,12 @@ export function DailyLogEditor({
       : LOG_FIELDS.map((item) => item.id);
 
     for (const key of studentFields) {
-      const current = fieldsRef.current[key] || "";
-      const count = getPlainTextLength(current);
-      const original = originalByLogRef.current[log.id]?.[key] || "";
+      const currentValue = current[key] || "";
+      const count = getPlainTextLength(currentValue);
+      const original = originalByLogRef.current[logId]?.[key] || "";
       const unchangedExisting =
         getPlainTextLength(original) > 0 &&
-        sanitizeRichTextHtml(current) === sanitizeRichTextHtml(original);
+        sanitizeRichTextHtml(currentValue) === sanitizeRichTextHtml(original);
       if (count < MIN_LOG_CHARS && !unchangedExisting) {
         const definition = LOG_FIELDS.find((item) => item.id === key);
         return {
@@ -183,31 +213,41 @@ export function DailyLogEditor({
     return null;
   };
 
-  const handleField = (key: LogFieldKey, value: string) => {
-    const next = { ...fieldsRef.current, [key]: value };
-    fieldsRef.current = next;
-    setFields(next);
-    if (log) {
-      const dirty =
-        dirtyByLogRef.current[log.id] ||
-        (dirtyByLogRef.current[log.id] = new Set<LogFieldKey>());
-      dirty.add(key);
-      storeLogDraft(log.id, next, dirty);
+  const handleField = (logId: number, key: LogFieldKey, value: string) => {
+    const current =
+      fieldsByLogRef.current[logId] ||
+      (activeLogIdRef.current === logId ? fieldsRef.current : undefined);
+    if (!current) return;
+
+    const next = { ...current, [key]: value };
+    fieldsByLogRef.current[logId] = next;
+    if (activeLogIdRef.current === logId) {
+      fieldsRef.current = next;
+      setFields(next);
     }
+    const dirty =
+      dirtyByLogRef.current[logId] ||
+      (dirtyByLogRef.current[logId] = new Set<LogFieldKey>());
+    dirty.add(key);
+    storeLogDraft(logId, next, dirty);
   };
 
-  const saveCurrent = async (
+  const saveLog = async (
+    logId: number,
     field?: LogFieldKey,
     redirectAfter = false
   ): Promise<boolean> => {
-    if (!log || isReadOnly) return false;
-    const violation = findMinimumViolation(field);
+    if (isReadOnly) return false;
+    const current = fieldsByLogRef.current[logId];
+    if (!current) return false;
+    const violation = findMinimumViolation(logId, current, field);
     if (violation) {
-      setMinimumPrompt(violation);
-      setSaveStatus("idle");
+      if (activeLogIdRef.current === logId) {
+        setMinimumPrompt(violation);
+        setSaveStatus("idle");
+      }
       return false;
     }
-    const current = fieldsRef.current;
     const payload: Partial<LogFields> = field
       ? { [field]: sanitizeRichTextHtml(current[field]) }
       : mode === "student"
@@ -219,13 +259,21 @@ export function DailyLogEditor({
           }
         : { teacher_comment: sanitizeRichTextHtml(current.teacher_comment) };
 
-    const saved = await enqueueSave({ logId: log.id, payload });
+    const saved = await enqueueSave({ logId, payload });
     if (saved && redirectAfter) router.push(saveRedirectHref);
     return saved;
   };
 
-  const handleFieldBlur = (field: LogFieldKey) => {
-    if (!isReadOnly) void saveCurrent(field);
+  const handleFieldBlur = (logId: number, field: LogFieldKey) => {
+    if (!isReadOnly) void saveLog(logId, field);
+  };
+
+  const handleDayChange = (nextDay: number) => {
+    if (nextDay === day) return;
+    const targetLog = logs.find((item) => item.day === nextDay);
+    if (!targetLog) return;
+    displayLog(targetLog);
+    setDay(nextDay);
   };
 
   if (!log) return null;
@@ -280,7 +328,11 @@ export function DailyLogEditor({
             )}
             {isReadOnly ? null : <SaveIndicator status={saveStatus} />}
             {saveStatus === "failed" && (
-              <Button size="sm" variant="secondary" onClick={() => void saveCurrent()}>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => void saveLog(log.id)}
+              >
                 重试保存
               </Button>
             )}
@@ -316,12 +368,15 @@ export function DailyLogEditor({
                   <button
                     key={d}
                     type="button"
-                    onClick={() => setDay(d)}
+                    onClick={() => handleDayChange(d)}
+                    disabled={!l}
                     className={clsx(
                       "flex min-w-[72px] shrink-0 items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-all lg:min-w-0 lg:w-full",
                       active
                         ? "bg-primary text-white shadow-sm"
-                        : "bg-gray-50 text-text-secondary hover:bg-primary-light hover:text-primary"
+                        : l
+                          ? "bg-gray-50 text-text-secondary hover:bg-primary-light hover:text-primary"
+                          : "cursor-not-allowed bg-gray-50 text-gray-300"
                     )}
                   >
                     <span>Day {d}</span>
@@ -386,14 +441,14 @@ export function DailyLogEditor({
                   <span className="text-xs text-text-secondary">Section {i + 1} of 4</span>
                 </div>
                 <TextArea
-                  key={`${day}-${f.id}`}
+                  key={`${log.id}-${editorSession}-${f.id}`}
                   labelEn={f.labelEn}
                   labelZh={f.labelZh}
                   helper={f.helper}
                   value={fields[f.id]}
                   maxChars={f.maxChars}
-                  onChange={(v) => handleField(f.id, v)}
-                  onBlurSave={() => handleFieldBlur(f.id)}
+                  onChange={(v) => handleField(log.id, f.id, v)}
+                  onBlurSave={() => handleFieldBlur(log.id, f.id)}
                   disabled={mode === "teacher" || isReadOnly}
                   large
                   error={
@@ -413,7 +468,7 @@ export function DailyLogEditor({
                   </p>
                 )}
                 {saveError && <p className="text-xs text-red-600">{saveError}</p>}
-                <Button onClick={() => void saveCurrent(undefined, true)}>
+                <Button onClick={() => void saveLog(log.id, undefined, true)}>
                   Save Log
                 </Button>
               </div>
@@ -436,13 +491,13 @@ export function DailyLogEditor({
                 </p>
               )}
               <TextArea
-                key={`${day}-teacher_comment`}
+                key={`${log.id}-${editorSession}-teacher_comment`}
                 labelEn="Teacher Comment"
                 labelZh="老师评语"
                 value={fields.teacher_comment}
                 maxChars={800}
-                onChange={(v) => handleField("teacher_comment", v)}
-                onBlurSave={() => handleFieldBlur("teacher_comment")}
+                onChange={(v) => handleField(log.id, "teacher_comment", v)}
+                onBlurSave={() => handleFieldBlur(log.id, "teacher_comment")}
                 disabled={mode === "student" || isReadOnly}
                 large
                 helper={
@@ -456,7 +511,9 @@ export function DailyLogEditor({
               {mode === "teacher" && (
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <Button onClick={() => void saveCurrent(undefined, true)}>Save Comment</Button>
+                    <Button onClick={() => void saveLog(log.id, undefined, true)}>
+                      Save Comment
+                    </Button>
                     {saveError && <p className="mt-2 text-xs text-red-600">{saveError}</p>}
                   </div>
                   {log.teacher_comment_updated_at && (
