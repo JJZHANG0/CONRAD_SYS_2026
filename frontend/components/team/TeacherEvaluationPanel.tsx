@@ -21,11 +21,11 @@ interface Criterion {
 const BUSINESS_CRITERIA: Criterion[] = [
   {
     key: "business_duration",
-    text: "时长达标：老师在商业组现场指导累计时长超过 3 小时（不含集中讲课）。",
+    text: "时长达标：老师在商业组现场指导累计超过3小时（不含集中讲课）。",
   },
   {
     key: "business_correction",
-    text: "纠错干预：老师发现并纠正了学生商业逻辑中的明显错误（如定价、成本）。",
+    text: "纠错干预：老师发现并纠正了学生商业逻辑中的明显错误。",
   },
   {
     key: "business_progress",
@@ -33,34 +33,34 @@ const BUSINESS_CRITERIA: Criterion[] = [
   },
   {
     key: "business_questions",
-    text: "答疑解惑：老师针对商业画布或路演稿回答了学生的具体提问。",
+    text: "答疑解惑：老师针对商业设想或竞赛材料回答了学生的具体提问。",
   },
   {
     key: "business_log_feedback",
-    text: "日志反馈：老师检查并点评反馈了当日学生的商业日志或复盘笔记。",
+    text: "日志反馈：老师检查并点评了学生当日商业日志或复盘笔记。",
   },
 ];
 
 const ENGINEERING_CRITERIA: Criterion[] = [
   {
     key: "engineering_duration",
-    text: "时长达标：老师在工程组现场指导累计时长超过 3 小时（不含集中讲课）。",
+    text: "时长达标：老师在工程组现场指导累计超过3小时（不含集中讲课）。",
   },
   {
     key: "engineering_development",
-    text: "研发协助：老师指导学生进行原型研发或功能开发，解决代码或硬件 Bug。",
+    text: "研发协助：老师指导学生开展原型研发，并协助解决技术问题。",
   },
   {
     key: "engineering_review",
-    text: "技术复盘：老师针对当天技术难点在白板或纸上进行了梳理总结。",
+    text: "技术复盘：老师针对当日技术难点进行了梳理和总结。",
   },
   {
     key: "engineering_progress",
-    text: "进度检查：老师检查了研发进度，并确认符合当日计划。",
+    text: "进度检查：老师检查了当日研发进度，并确认符合计划。",
   },
   {
     key: "engineering_log_feedback",
-    text: "日志反馈：老师检查并点评反馈了当日学生的工程日志或实验记录。",
+    text: "日志反馈：老师检查并点评了学生当日工程日志或实验记录。",
   },
 ];
 
