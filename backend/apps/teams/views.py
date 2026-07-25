@@ -163,6 +163,11 @@ class TeacherEvaluationUpdateView(APIView):
         team = get_object_or_404(Team, pk=team_id)
 
         def save_evaluation():
+            request_data = request.data.copy()
+            # The comment is a single five-day summary stored with Day 5.
+            # Earlier days contain objective checklist scores only.
+            if day != 5:
+                request_data["comment"] = ""
             evaluation, _ = run_with_db_retry(
                 lambda: TeacherDailyEvaluation.objects.get_or_create(
                     team=team,
@@ -171,7 +176,7 @@ class TeacherEvaluationUpdateView(APIView):
             )
             serializer = TeacherDailyEvaluationSerializer(
                 evaluation,
-                data=request.data,
+                data=request_data,
                 partial=True,
             )
             serializer.is_valid(raise_exception=True)

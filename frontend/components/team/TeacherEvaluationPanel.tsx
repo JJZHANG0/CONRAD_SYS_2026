@@ -233,10 +233,13 @@ export function TeacherEvaluationPanel({
         },
         {} as Record<TeacherEvaluationCheck, boolean>
       );
-      const saved = await updateTeacherEvaluation(teamId, selectedDay, {
-        ...checks,
-        comment: current.comment,
-      });
+      const saved = await updateTeacherEvaluation(
+        teamId,
+        selectedDay,
+        selectedDay === 5
+          ? { ...checks, comment: current.comment }
+          : checks
+      );
       setEvaluations((previous) => ({ ...previous, [selectedDay]: saved }));
       setSavedDays((previous) => new Set(previous).add(selectedDay));
       setDirtyDays((previous) => {
@@ -266,7 +269,7 @@ export function TeacherEvaluationPanel({
               {teacherName}
             </h2>
             <p className="mt-1 text-sm text-text-secondary">
-              每日满分 10 分，五天累计满分 50 分
+              每日满分 10 分，五天累计满分 50 分 · Day 5 填写总评语
               {!canEdit && " · 运营评分结果（只读）"}
             </p>
           </div>
@@ -344,30 +347,38 @@ export function TeacherEvaluationPanel({
         </div>
 
         <div className="mt-5">
-          <label
-            htmlFor={`teacher-evaluation-comment-${selectedDay}`}
-            className="mb-2 block text-sm font-semibold text-text-primary"
-          >
-            运营老师当日评语
-          </label>
-          <textarea
-            id={`teacher-evaluation-comment-${selectedDay}`}
-            value={current.comment}
-            disabled={!canEdit}
-            maxLength={2000}
-            onChange={(event) =>
-              updateCurrent((value) => ({
-                ...value,
-                comment: event.target.value,
-              }))
-            }
-            placeholder={
-              canEdit
-                ? "记录老师当天指导的亮点、需要改进的地方或后续建议..."
-                : "运营老师暂未填写当日评语"
-            }
-            className="min-h-28 w-full resize-y rounded-xl border border-border bg-white px-4 py-3 text-sm leading-relaxed text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50 disabled:text-text-secondary"
-          />
+          {selectedDay === 5 ? (
+            <div>
+              <label
+                htmlFor="teacher-evaluation-overall-comment"
+                className="mb-2 block text-sm font-semibold text-text-primary"
+              >
+                运营老师五日总评语
+              </label>
+              <textarea
+                id="teacher-evaluation-overall-comment"
+                value={current.comment}
+                disabled={!canEdit}
+                maxLength={2000}
+                onChange={(event) =>
+                  updateCurrent((value) => ({
+                    ...value,
+                    comment: event.target.value,
+                  }))
+                }
+                placeholder={
+                  canEdit
+                    ? "总结老师五天指导工作的亮点、需要改进的地方和后续建议..."
+                    : "运营老师暂未填写五日总评语"
+                }
+                className="min-h-28 w-full resize-y rounded-xl border border-border bg-white px-4 py-3 text-sm leading-relaxed text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50 disabled:text-text-secondary"
+              />
+            </div>
+          ) : (
+            <p className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+              Day 1–4 仅进行客观评分，运营老师将在 Day 5 填写五日总评语。
+            </p>
+          )}
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <div>
               {dirtyDays.has(selectedDay) && canEdit && (

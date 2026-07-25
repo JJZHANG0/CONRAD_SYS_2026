@@ -66,6 +66,26 @@ class TeacherDailyEvaluationTests(APITestCase):
         self.assertEqual(response.data["total_score"], 3)
         evaluation = TeacherDailyEvaluation.objects.get(team=self.team, day=1)
         self.assertEqual(evaluation.reviewed_by, self.operations)
+        self.assertEqual(evaluation.comment, "")
+
+    def test_only_day_five_accepts_the_overall_comment(self):
+        self.client.force_authenticate(self.operations)
+        day_five_url = reverse(
+            "teacher-evaluation-update",
+            args=[self.team.id, 5],
+        )
+
+        response = self.client.patch(
+            day_five_url,
+            {"comment": "五天整体指导认真，后续可以加强跨组协作。"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data["comment"],
+            "五天整体指导认真，后续可以加强跨组协作。",
+        )
 
     def test_assigned_teacher_can_view_but_cannot_edit(self):
         TeacherDailyEvaluation.objects.create(
