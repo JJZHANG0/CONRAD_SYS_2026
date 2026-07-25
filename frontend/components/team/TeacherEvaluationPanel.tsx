@@ -21,7 +21,7 @@ interface Criterion {
 const BUSINESS_CRITERIA: Criterion[] = [
   {
     key: "business_duration",
-    text: "时长达标：老师在商业组现场指导累计超过3小时（不含集中讲课）。",
+    text: "时长达标：老师在商业组现场指导累计超过3小时。",
   },
   {
     key: "business_correction",
@@ -33,7 +33,7 @@ const BUSINESS_CRITERIA: Criterion[] = [
   },
   {
     key: "business_questions",
-    text: "答疑解惑：老师针对商业设想或竞赛材料回答了学生的具体提问。",
+    text: "答疑解惑：老师针对商业竞赛材料回答了学生的具体提问。",
   },
   {
     key: "business_log_feedback",
@@ -44,7 +44,7 @@ const BUSINESS_CRITERIA: Criterion[] = [
 const ENGINEERING_CRITERIA: Criterion[] = [
   {
     key: "engineering_duration",
-    text: "时长达标：老师在工程组现场指导累计超过3小时（不含集中讲课）。",
+    text: "时长达标：老师在工程组现场指导累计超过3小时。",
   },
   {
     key: "engineering_development",
