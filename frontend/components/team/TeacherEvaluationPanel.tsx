@@ -255,7 +255,7 @@ export function TeacherEvaluationPanel({
     }
   };
 
-  if (loading) return <LoadingState message="正在加载老师每日评分..." />;
+  if (loading) return <LoadingState message="正在加载运营每日点评打分卡..." />;
 
   return (
     <Card className="mb-6 !p-0 overflow-hidden">
@@ -263,7 +263,7 @@ export function TeacherEvaluationPanel({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-accent-purple">
-              Teacher Daily Evaluation · 老师每日巡查评分
+              Operations Daily Review · 运营每日点评打分卡
             </p>
             <h2 className="mt-1 text-xl font-bold text-text-primary">
               {teacherName}
