@@ -2,11 +2,63 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from apps.accounts.serializers import UserSerializer
-from apps.teams.services import brief_stats, student_log_stats, team_content_stats, team_log_stats
+from apps.teams.services import (
+    student_log_stats,
+    teacher_evaluation_stats,
+    team_content_stats,
+    team_log_stats,
+)
 
-from .models import Team, TeamMember
+from .models import Team, TeacherDailyEvaluation, TeamMember
 
 User = get_user_model()
+
+
+def visible_teacher_evaluation_stats(serializer, team):
+    request = serializer.context.get("request")
+    user = getattr(request, "user", None)
+    if user and (
+        user.is_operations or (user.is_teacher and team.teacher_id == user.id)
+    ):
+        return teacher_evaluation_stats(team)
+    return {}
+
+
+class TeacherDailyEvaluationSerializer(serializers.ModelSerializer):
+    reviewed_by_name = serializers.CharField(
+        source="reviewed_by.display_name", read_only=True, default=""
+    )
+    business_score = serializers.IntegerField(read_only=True)
+    engineering_score = serializers.IntegerField(read_only=True)
+    total_score = serializers.IntegerField(read_only=True)
+    comment = serializers.CharField(
+        allow_blank=True, required=False, max_length=2000
+    )
+
+    class Meta:
+        model = TeacherDailyEvaluation
+        fields = (
+            "id",
+            "day",
+            *TeacherDailyEvaluation.CHECK_FIELDS,
+            "business_score",
+            "engineering_score",
+            "total_score",
+            "comment",
+            "reviewed_by_name",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = (
+            "id",
+            "day",
+            "business_score",
+            "engineering_score",
+            "total_score",
+            "reviewed_by_name",
+            "created_at",
+            "updated_at",
+        )
 
 
 class TeamMemberSerializer(serializers.ModelSerializer):
@@ -35,7 +87,8 @@ class TeamListSerializer(serializers.ModelSerializer):
     def get_stats(self, obj):
         log_stats = team_log_stats(obj)
         content = team_content_stats(obj)
-        return {**log_stats, **content}
+        evaluation = visible_teacher_evaluation_stats(self, obj)
+        return {**log_stats, **content, **evaluation}
 
 
 class TeamDetailSerializer(serializers.ModelSerializer):
@@ -54,4 +107,5 @@ class TeamDetailSerializer(serializers.ModelSerializer):
     def get_stats(self, obj):
         log_stats = team_log_stats(obj)
         content = team_content_stats(obj)
-        return {**log_stats, **content}
+        evaluation = visible_teacher_evaluation_stats(self, obj)
+        return {**log_stats, **content, **evaluation}

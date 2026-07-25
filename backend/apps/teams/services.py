@@ -83,6 +83,22 @@ def team_content_stats(team):
         }
 
 
+def teacher_evaluation_stats(team):
+    try:
+        evaluations = list(team.teacher_evaluations.all())
+        return {
+            "teacher_score_total": sum(item.total_score for item in evaluations),
+            "teacher_score_max": 50,
+            "teacher_score_days": len(evaluations),
+        }
+    except Exception:
+        return {
+            "teacher_score_total": 0,
+            "teacher_score_max": 50,
+            "teacher_score_days": 0,
+        }
+
+
 def create_daily_logs_for_member(team, student):
     for day in range(1, 6):
         DailyLog.objects.get_or_create(team=team, student=student, day=day)

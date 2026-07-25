@@ -7,6 +7,34 @@ export interface TeamStats {
   innovation_brief_total: number;
   bmc_completion_count: number;
   bmc_total: number;
+  teacher_score_total?: number;
+  teacher_score_max?: number;
+  teacher_score_days?: number;
+}
+
+export type TeacherEvaluationCheck =
+  | "business_duration"
+  | "business_correction"
+  | "business_progress"
+  | "business_questions"
+  | "business_log_feedback"
+  | "engineering_duration"
+  | "engineering_development"
+  | "engineering_review"
+  | "engineering_progress"
+  | "engineering_log_feedback";
+
+export interface TeacherDailyEvaluation
+  extends Record<TeacherEvaluationCheck, boolean> {
+  id?: number;
+  day: number;
+  business_score: number;
+  engineering_score: number;
+  total_score: number;
+  comment: string;
+  reviewed_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface TeamSummary {

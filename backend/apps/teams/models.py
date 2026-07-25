@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -55,3 +56,85 @@ class TeamMember(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+
+
+class TeacherDailyEvaluation(models.Model):
+    """Operations' daily, fact-based evaluation of a team's assigned teacher."""
+
+    CHECK_FIELDS = (
+        "business_duration",
+        "business_correction",
+        "business_progress",
+        "business_questions",
+        "business_log_feedback",
+        "engineering_duration",
+        "engineering_development",
+        "engineering_review",
+        "engineering_progress",
+        "engineering_log_feedback",
+    )
+
+    team = models.ForeignKey(
+        Team,
+        on_delete=models.CASCADE,
+        related_name="teacher_evaluations",
+    )
+    day = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="teacher_evaluations_given",
+        limit_choices_to={"role": "operations"},
+    )
+
+    business_duration = models.BooleanField(default=False)
+    business_correction = models.BooleanField(default=False)
+    business_progress = models.BooleanField(default=False)
+    business_questions = models.BooleanField(default=False)
+    business_log_feedback = models.BooleanField(default=False)
+
+    engineering_duration = models.BooleanField(default=False)
+    engineering_development = models.BooleanField(default=False)
+    engineering_review = models.BooleanField(default=False)
+    engineering_progress = models.BooleanField(default=False)
+    engineering_log_feedback = models.BooleanField(default=False)
+
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["day"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["team", "day"],
+                name="unique_teacher_evaluation_per_team_day",
+            )
+        ]
+
+    @property
+    def business_score(self):
+        return sum(
+            bool(getattr(self, field))
+            for field in self.CHECK_FIELDS
+            if field.startswith("business_")
+        )
+
+    @property
+    def engineering_score(self):
+        return sum(
+            bool(getattr(self, field))
+            for field in self.CHECK_FIELDS
+            if field.startswith("engineering_")
+        )
+
+    @property
+    def total_score(self):
+        return self.business_score + self.engineering_score
+
+    def __str__(self):
+        return f"{self.team.name} Day {self.day}: {self.total_score}/10"

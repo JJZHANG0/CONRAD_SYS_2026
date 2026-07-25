@@ -32,12 +32,19 @@ export function TeamHeader({
             {canExportTeamLogs && <TeamLogsExportButton team={team} />}
           </div>
       </div>
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
         <StatCard label="Members" value={`${s.member_count}/5`} accent="blue" />
         <StatCard label="Logs Done" value={`${s.log_completion_count}/${s.total_log_count}`} accent="purple" />
         <StatCard label="Comments" value={`${s.teacher_comment_count}/${s.total_log_count}`} accent="yellow" />
         <StatCard label="Brief" value={`${s.innovation_brief_completion_count}/${s.innovation_brief_total}`} accent="blue" />
         <StatCard label="BMC" value={`${s.bmc_completion_count}/${s.bmc_total}`} accent="yellow" />
+        {s.teacher_score_total != null && (
+          <StatCard
+            label="Teacher Score"
+            value={`${s.teacher_score_total}/${s.teacher_score_max ?? 50}`}
+            accent="purple"
+          />
+        )}
       </div>
     </Card>
   );

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Team, TeamMember
+from .models import Team, TeacherDailyEvaluation, TeamMember
 
 
 class TeamMemberInline(admin.TabularInline):
@@ -21,3 +21,16 @@ class TeamAdmin(admin.ModelAdmin):
 class TeamMemberAdmin(admin.ModelAdmin):
     list_display = ("team", "student", "student_role", "created_at")
     search_fields = ("team__name", "student__username")
+
+
+@admin.register(TeacherDailyEvaluation)
+class TeacherDailyEvaluationAdmin(admin.ModelAdmin):
+    list_display = (
+        "team",
+        "day",
+        "total_score",
+        "reviewed_by",
+        "updated_at",
+    )
+    list_filter = ("day",)
+    search_fields = ("team__name", "team__teacher__display_name")

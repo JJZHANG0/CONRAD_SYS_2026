@@ -1,17 +1,24 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.briefs.models import InnovationBrief
+from apps.common.db import run_with_db_retry
+from apps.common.views import handle_form_database_errors
 from apps.logs.models import DailyLog
-from apps.teams.models import Team, TeamMember
+from apps.teams.models import Team, TeacherDailyEvaluation, TeamMember
 
 from .permissions import user_can_access_team, user_is_team_member, user_is_team_teacher
-from .serializers import TeamDetailSerializer, TeamListSerializer
+from .serializers import (
+    TeacherDailyEvaluationSerializer,
+    TeamDetailSerializer,
+    TeamListSerializer,
+)
 from .services import (
     next_incomplete_day,
     student_log_stats,
+    teacher_evaluation_stats,
     team_content_stats,
     team_log_stats,
 )
@@ -23,9 +30,13 @@ class TeamListView(generics.ListAPIView):
     def get_queryset(self):
         user = self.request.user
         if user.is_operations:
-            return Team.objects.all().prefetch_related("members")
+            return Team.objects.all().prefetch_related(
+                "members", "teacher_evaluations"
+            )
         if user.is_teacher:
-            return Team.objects.filter(teacher=user).prefetch_related("members")
+            return Team.objects.filter(teacher=user).prefetch_related(
+                "members", "teacher_evaluations"
+            )
         membership = TeamMember.objects.filter(student=user).select_related("team").first()
         if membership:
             return Team.objects.filter(pk=membership.team_id)
@@ -37,7 +48,9 @@ class TeamDetailView(generics.RetrieveAPIView):
     lookup_url_kwarg = "team_id"
 
     def get_queryset(self):
-        return Team.objects.prefetch_related("members__student", "teacher")
+        return Team.objects.prefetch_related(
+            "members__student", "teacher_evaluations"
+        ).select_related("teacher")
 
     def get_object(self):
         team = get_object_or_404(Team, pk=self.kwargs["team_id"])
@@ -50,10 +63,16 @@ class DashboardView(APIView):
     def get(self, request):
         user = request.user
         if user.is_operations:
-            teams = Team.objects.all().prefetch_related("members")
+            teams = Team.objects.all().select_related("teacher").prefetch_related(
+                "members", "teacher_evaluations"
+            )
             team_data = []
             for team in teams:
-                stats = {**team_log_stats(team), **team_content_stats(team)}
+                stats = {
+                    **team_log_stats(team),
+                    **team_content_stats(team),
+                    **teacher_evaluation_stats(team),
+                }
                 team_data.append({
                     "id": team.id,
                     "name": team.name,
@@ -65,10 +84,16 @@ class DashboardView(APIView):
             return Response({"role": "operations", "teams": team_data})
 
         if user.is_teacher:
-            teams = Team.objects.filter(teacher=user).prefetch_related("members")
+            teams = Team.objects.filter(teacher=user).prefetch_related(
+                "members", "teacher_evaluations"
+            )
             team_data = []
             for team in teams:
-                stats = {**team_log_stats(team), **team_content_stats(team)}
+                stats = {
+                    **team_log_stats(team),
+                    **team_content_stats(team),
+                    **teacher_evaluation_stats(team),
+                }
                 team_data.append({
                     "id": team.id,
                     "name": team.name,
@@ -104,3 +129,54 @@ class DashboardView(APIView):
             "next_incomplete_day": next_incomplete_day(user, team) or 1,
             "total_log_count": 5,
         })
+
+
+class TeacherEvaluationListView(APIView):
+    def get(self, request, team_id):
+        team = get_object_or_404(Team, pk=team_id)
+        can_view = request.user.is_operations or (
+            request.user.is_teacher and team.teacher_id == request.user.id
+        )
+        if not can_view:
+            return Response(
+                {"detail": "Permission denied."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        evaluations = team.teacher_evaluations.select_related(
+            "reviewed_by"
+        ).order_by("day")
+        return Response(TeacherDailyEvaluationSerializer(evaluations, many=True).data)
+
+
+class TeacherEvaluationUpdateView(APIView):
+    def patch(self, request, team_id, day):
+        if not request.user.is_operations:
+            return Response(
+                {"detail": "Only operations accounts can edit teacher evaluations."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if day not in range(1, 6):
+            return Response(
+                {"detail": "Day must be between 1 and 5."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        team = get_object_or_404(Team, pk=team_id)
+
+        def save_evaluation():
+            evaluation, _ = run_with_db_retry(
+                lambda: TeacherDailyEvaluation.objects.get_or_create(
+                    team=team,
+                    day=day,
+                )
+            )
+            serializer = TeacherDailyEvaluationSerializer(
+                evaluation,
+                data=request.data,
+                partial=True,
+            )
+            serializer.is_valid(raise_exception=True)
+            saved = serializer.save(reviewed_by=request.user)
+            saved.refresh_from_db()
+            return Response(TeacherDailyEvaluationSerializer(saved).data)
+
+        return handle_form_database_errors(save_evaluation)

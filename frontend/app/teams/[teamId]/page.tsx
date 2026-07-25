@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AuthGuard, AppShell } from "@/components/layout/AppShell";
 import { TeamHeader, TeamMemberCard } from "@/components/team";
+import { TeacherEvaluationPanel } from "@/components/team/TeacherEvaluationPanel";
 import { LoadingState, Button } from "@/components/ui";
 import { fetchTeam } from "@/lib/teamApi";
 import { getErrorMessage } from "@/lib/apiClient";
@@ -63,6 +64,16 @@ function TeamContent() {
         team={team}
         canExportTeamLogs={user?.role === "operations"}
       />
+      {(user?.role === "operations" || user?.role === "teacher") && (
+        <TeacherEvaluationPanel
+          teamId={team.id}
+          teacherName={team.teacher.display_name}
+          canEdit={user.role === "operations"}
+          onSaved={() => {
+            void fetchTeam(team.id).then(setTeam);
+          }}
+        />
+      )}
       <h2 className="mb-4 text-lg font-semibold">Team Members</h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {team.members.map((m) => (

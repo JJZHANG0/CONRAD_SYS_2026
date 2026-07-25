@@ -81,6 +81,7 @@ export function TeamCard({ team }: { team: TeacherDashboard["teams"][0] }) {
           <ProgressBar value={team.teacher_comment_count} max={team.total_log_count || 1} label="Teacher Comments" />
           <ProgressBar value={team.innovation_brief_completion_count ?? 0} max={team.innovation_brief_total || 10} label="Innovation Brief" />
           <ProgressBar value={team.bmc_completion_count ?? 0} max={team.bmc_total || 12} label="Lean Canvas" />
+          <ProgressBar value={team.teacher_score_total ?? 0} max={team.teacher_score_max ?? 50} label="Teacher Score" />
         </div>
         <span className="mt-4 block w-full rounded-xl border border-border bg-white py-2 text-center text-sm font-medium text-text-primary">
           Enter Team →
@@ -115,6 +116,7 @@ export function OperationsDashboardView({ data, onRefresh }: OperationsDashboard
                 <ProgressBar value={t.teacher_comment_count} max={t.total_log_count || 1} label="Teacher Comments" />
                 <ProgressBar value={t.innovation_brief_completion_count ?? 0} max={t.innovation_brief_total || 10} label="Innovation Brief" />
                 <ProgressBar value={t.bmc_completion_count ?? 0} max={t.bmc_total || 12} label="Lean Canvas" />
+                <ProgressBar value={t.teacher_score_total ?? 0} max={t.teacher_score_max ?? 50} label="Teacher Score" />
               </div>
               <span className="mt-4 block w-full rounded-xl border border-border bg-white py-2 text-center text-sm font-medium text-text-primary">
                 Enter Team →
