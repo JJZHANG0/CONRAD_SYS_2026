@@ -68,7 +68,7 @@ function coverHtml(team: TeamDetail, bundles: StudentLogsBundle[]): string {
           <div><span>队伍 / Team</span><strong>${escapeHtml(team.name)}</strong></div>
           <div><span>项目 / Project</span><strong>${escapeHtml(team.project_name || "—")}</strong></div>
           <div><span>赛道 / Category</span><strong>${escapeHtml(team.challenge_category || "—")}</strong></div>
-          <div><span>带队老师 / Teacher</span><strong>${escapeHtml(team.teacher.display_name || "—")}</strong></div>
+          <div><span>带队老师 / Teacher</span><strong>${escapeHtml(team.teacher_name || team.teacher.display_name || "—")}</strong></div>
           <div><span>学生人数 / Members</span><strong>${bundles.length}</strong></div>
           <div><span>导出时间 / Exported</span><strong>${escapeHtml(formatDate())}</strong></div>
         </div>

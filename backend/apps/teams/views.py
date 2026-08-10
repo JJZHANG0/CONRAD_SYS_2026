@@ -1,15 +1,14 @@
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.briefs.models import InnovationBrief
 from apps.common.db import run_with_db_retry
 from apps.common.views import handle_form_database_errors
-from apps.logs.models import DailyLog
 from apps.teams.models import Team, TeacherDailyEvaluation, TeamMember
 
-from .permissions import user_can_access_team, user_is_team_member, user_is_team_teacher
+from .permissions import user_can_access_team, user_is_team_teacher
 from .serializers import (
     TeacherDailyEvaluationSerializer,
     TeamDetailSerializer,
@@ -24,6 +23,15 @@ from .services import (
 )
 
 
+def teams_for_teacher(user):
+    return (
+        Team.objects.filter(Q(teacher=user) | Q(co_teachers=user))
+        .select_related("teacher")
+        .prefetch_related("members", "teacher_evaluations", "co_teachers")
+        .distinct()
+    )
+
+
 class TeamListView(generics.ListAPIView):
     serializer_class = TeamListSerializer
 
@@ -31,15 +39,15 @@ class TeamListView(generics.ListAPIView):
         user = self.request.user
         if user.is_operations:
             return Team.objects.all().prefetch_related(
-                "members", "teacher_evaluations"
+                "members", "teacher_evaluations", "co_teachers"
             )
         if user.is_teacher:
-            return Team.objects.filter(teacher=user).prefetch_related(
-                "members", "teacher_evaluations"
-            )
+            return teams_for_teacher(user)
         membership = TeamMember.objects.filter(student=user).select_related("team").first()
         if membership:
-            return Team.objects.filter(pk=membership.team_id)
+            return Team.objects.filter(pk=membership.team_id).prefetch_related(
+                "co_teachers"
+            )
         return Team.objects.none()
 
 
@@ -49,7 +57,7 @@ class TeamDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return Team.objects.prefetch_related(
-            "members__student", "teacher_evaluations"
+            "members__student", "teacher_evaluations", "co_teachers"
         ).select_related("teacher")
 
     def get_object(self):
@@ -64,7 +72,7 @@ class DashboardView(APIView):
         user = request.user
         if user.is_operations:
             teams = Team.objects.all().select_related("teacher").prefetch_related(
-                "members", "teacher_evaluations"
+                "members", "teacher_evaluations", "co_teachers"
             )
             team_data = []
             for team in teams:
@@ -78,15 +86,13 @@ class DashboardView(APIView):
                     "name": team.name,
                     "project_name": team.project_name,
                     "challenge_category": team.challenge_category,
-                    "teacher_name": team.teacher.display_name,
+                    "teacher_name": team.teacher_names_text(),
                     **stats,
                 })
             return Response({"role": "operations", "teams": team_data})
 
         if user.is_teacher:
-            teams = Team.objects.filter(teacher=user).prefetch_related(
-                "members", "teacher_evaluations"
-            )
+            teams = teams_for_teacher(user)
             team_data = []
             for team in teams:
                 stats = {
@@ -99,6 +105,7 @@ class DashboardView(APIView):
                     "name": team.name,
                     "project_name": team.project_name,
                     "challenge_category": team.challenge_category,
+                    "teacher_name": team.teacher_names_text(),
                     **stats,
                 })
             return Response({"role": "teacher", "teams": team_data})
@@ -122,7 +129,7 @@ class DashboardView(APIView):
                 "name": team.name,
                 "project_name": team.project_name,
                 "challenge_category": team.challenge_category,
-                "teacher_name": team.teacher.display_name,
+                "teacher_name": team.teacher_names_text(),
             },
             "my_log_completion": stats["log_completion_count"],
             "teacher_comment_count": stats["teacher_comment_count"],
@@ -134,8 +141,8 @@ class DashboardView(APIView):
 class TeacherEvaluationListView(APIView):
     def get(self, request, team_id):
         team = get_object_or_404(Team, pk=team_id)
-        can_view = request.user.is_operations or (
-            request.user.is_teacher and team.teacher_id == request.user.id
+        can_view = request.user.is_operations or user_is_team_teacher(
+            request.user, team
         )
         if not can_view:
             return Response(

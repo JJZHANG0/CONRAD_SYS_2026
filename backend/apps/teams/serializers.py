@@ -10,6 +10,7 @@ from apps.teams.services import (
 )
 
 from .models import Team, TeacherDailyEvaluation, TeamMember
+from .permissions import user_is_team_teacher
 
 User = get_user_model()
 
@@ -17,9 +18,7 @@ User = get_user_model()
 def visible_teacher_evaluation_stats(serializer, team):
     request = serializer.context.get("request")
     user = getattr(request, "user", None)
-    if user and (
-        user.is_operations or (user.is_teacher and team.teacher_id == user.id)
-    ):
+    if user and (user.is_operations or user_is_team_teacher(user, team)):
         return teacher_evaluation_stats(team)
     return {}
 
@@ -74,15 +73,31 @@ class TeamMemberSerializer(serializers.ModelSerializer):
 
 
 class TeamListSerializer(serializers.ModelSerializer):
-    teacher_name = serializers.CharField(source="teacher.display_name", read_only=True)
+    teacher_name = serializers.SerializerMethodField()
+    co_teacher_names = serializers.SerializerMethodField()
     stats = serializers.SerializerMethodField()
 
     class Meta:
         model = Team
         fields = (
-            "id", "name", "project_name", "challenge_category",
-            "teacher_name", "stats", "updated_at",
+            "id",
+            "name",
+            "project_name",
+            "challenge_category",
+            "teacher_name",
+            "co_teacher_names",
+            "stats",
+            "updated_at",
         )
+
+    def get_teacher_name(self, obj):
+        return obj.teacher_names_text()
+
+    def get_co_teacher_names(self, obj):
+        return [
+            user.display_name or user.username
+            for user in obj.co_teachers.all()
+        ]
 
     def get_stats(self, obj):
         log_stats = team_log_stats(obj)
@@ -93,16 +108,30 @@ class TeamListSerializer(serializers.ModelSerializer):
 
 class TeamDetailSerializer(serializers.ModelSerializer):
     teacher = UserSerializer(read_only=True)
+    co_teachers = UserSerializer(many=True, read_only=True)
+    teacher_name = serializers.SerializerMethodField()
     members = TeamMemberSerializer(many=True, read_only=True)
     stats = serializers.SerializerMethodField()
 
     class Meta:
         model = Team
         fields = (
-            "id", "name", "project_name", "challenge_category",
-            "description", "teacher", "members", "stats",
-            "created_at", "updated_at",
+            "id",
+            "name",
+            "project_name",
+            "challenge_category",
+            "description",
+            "teacher",
+            "co_teachers",
+            "teacher_name",
+            "members",
+            "stats",
+            "created_at",
+            "updated_at",
         )
+
+    def get_teacher_name(self, obj):
+        return obj.teacher_names_text()
 
     def get_stats(self, obj):
         log_stats = team_log_stats(obj)

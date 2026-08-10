@@ -43,6 +43,7 @@ export interface TeamSummary {
   project_name: string;
   challenge_category: string;
   teacher_name?: string;
+  co_teacher_names?: string[];
   stats?: TeamStats;
   updated_at?: string;
 }
@@ -67,6 +68,7 @@ export interface TeamMember {
 export interface TeamDetail extends TeamSummary {
   description?: string;
   teacher: { id: number; display_name: string; email: string };
+  co_teachers?: { id: number; display_name: string; email: string }[];
   members: TeamMember[];
   stats: TeamStats;
 }

@@ -14,6 +14,7 @@ class TeamAdmin(admin.ModelAdmin):
     list_display = ("name", "project_name", "teacher", "challenge_category", "updated_at")
     list_filter = ("challenge_category",)
     search_fields = ("name", "project_name")
+    filter_horizontal = ("co_teachers",)
     inlines = [TeamMemberInline]
 
 

@@ -67,7 +67,7 @@ function TeamContent() {
       {(user?.role === "operations" || user?.role === "teacher") && (
         <TeacherEvaluationPanel
           teamId={team.id}
-          teacherName={team.teacher.display_name}
+          teacherName={team.teacher_name || team.teacher.display_name}
           canEdit={user.role === "operations"}
           onSaved={() => {
             void fetchTeam(team.id).then(setTeam);

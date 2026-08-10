@@ -139,3 +139,18 @@ class TeacherDailyEvaluationTests(APITestCase):
         self.assertEqual(team_data["teacher_score_total"], 5)
         self.assertEqual(team_data["teacher_score_max"], 50)
         self.assertEqual(team_data["teacher_score_days"], 2)
+
+    def test_co_teacher_sees_team_and_combined_teacher_names(self):
+        self.other_teacher.display_name = "副老师"
+        self.other_teacher.save(update_fields=["display_name"])
+        self.team.co_teachers.add(self.other_teacher)
+
+        self.client.force_authenticate(self.other_teacher)
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data["teams"]), 1)
+        self.assertEqual(
+            response.data["teams"][0]["teacher_name"],
+            f"{self.teacher.display_name} / 副老师",
+        )

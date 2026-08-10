@@ -14,6 +14,12 @@ class Team(models.Model):
         related_name="teams",
         limit_choices_to={"role": "teacher"},
     )
+    # Optional additional teachers (teacher or operations) for dual-coach teams.
+    co_teachers = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name="co_taught_teams",
+    )
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -27,6 +33,17 @@ class Team(models.Model):
     @property
     def member_count(self):
         return self.members.count()
+
+    def teacher_display_names(self):
+        names = [self.teacher.display_name]
+        for user in self.co_teachers.all():
+            name = user.display_name or user.username
+            if name and name not in names:
+                names.append(name)
+        return names
+
+    def teacher_names_text(self):
+        return " / ".join(self.teacher_display_names())
 
 
 class TeamMember(models.Model):

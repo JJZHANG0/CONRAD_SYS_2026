@@ -20,7 +20,9 @@ export function TeamHeader({
           <span className="rounded-full bg-primary-light px-2 py-0.5 text-xs text-primary">{team.challenge_category}</span>
           <h1 className="mt-2 text-2xl font-bold">{team.name}</h1>
           <p className="text-text-secondary">{team.project_name}</p>
-          <p className="mt-1 text-sm">Teacher: {team.teacher.display_name}</p>
+          <p className="mt-1 text-sm">
+            Teacher: {team.teacher_name || team.teacher.display_name}
+          </p>
         </div>
           <div className="flex flex-wrap gap-3">
             <Link href={`/teams/${team.id}/innovation-brief`}>
