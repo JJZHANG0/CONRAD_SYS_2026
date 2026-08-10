@@ -23,6 +23,12 @@ def visible_teacher_evaluation_stats(serializer, team):
     return {}
 
 
+def current_user_is_team_teacher(serializer, team):
+    request = serializer.context.get("request")
+    user = getattr(request, "user", None)
+    return bool(user and user_is_team_teacher(user, team))
+
+
 class TeacherDailyEvaluationSerializer(serializers.ModelSerializer):
     reviewed_by_name = serializers.CharField(
         source="reviewed_by.display_name", read_only=True, default=""
@@ -110,6 +116,7 @@ class TeamDetailSerializer(serializers.ModelSerializer):
     teacher = UserSerializer(read_only=True)
     co_teachers = UserSerializer(many=True, read_only=True)
     teacher_name = serializers.SerializerMethodField()
+    viewer_is_team_teacher = serializers.SerializerMethodField()
     members = TeamMemberSerializer(many=True, read_only=True)
     stats = serializers.SerializerMethodField()
 
@@ -124,6 +131,7 @@ class TeamDetailSerializer(serializers.ModelSerializer):
             "teacher",
             "co_teachers",
             "teacher_name",
+            "viewer_is_team_teacher",
             "members",
             "stats",
             "created_at",
@@ -132,6 +140,9 @@ class TeamDetailSerializer(serializers.ModelSerializer):
 
     def get_teacher_name(self, obj):
         return obj.teacher_names_text()
+
+    def get_viewer_is_team_teacher(self, obj):
+        return current_user_is_team_teacher(self, obj)
 
     def get_stats(self, obj):
         log_stats = team_log_stats(obj)

@@ -154,3 +154,16 @@ class TeacherDailyEvaluationTests(APITestCase):
             response.data["teams"][0]["teacher_name"],
             f"{self.teacher.display_name} / 副老师",
         )
+
+    def test_operations_co_teacher_is_flagged_on_team_detail(self):
+        self.team.co_teachers.add(self.operations)
+        self.client.force_authenticate(self.operations)
+
+        response = self.client.get(reverse("team-detail", args=[self.team.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data["viewer_is_team_teacher"])
+        self.assertEqual(
+            [item["id"] for item in response.data["co_teachers"]],
+            [self.operations.id],
+        )

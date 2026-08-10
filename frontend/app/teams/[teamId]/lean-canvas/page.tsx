@@ -10,7 +10,9 @@ import { fetchLeanCanvas } from "@/lib/bmcApi";
 import { fetchTeam } from "@/lib/teamApi";
 import { getErrorMessage } from "@/lib/apiClient";
 import { useAuthStore } from "@/store/authStore";
+import { isAssignedTeamTeacher } from "@/utils/teamAccess";
 import type { LeanCanvas } from "@/types/bmc";
+import type { TeamDetail } from "@/types/team";
 
 export default function LeanCanvasPage() {
   return (
@@ -26,10 +28,7 @@ function LeanCanvasContent() {
   const { teamId } = useParams();
   const { user } = useAuthStore();
   const [canvas, setCanvas] = useState<LeanCanvas | null>(null);
-  const [teamName, setTeamName] = useState("");
-  const [projectName, setProjectName] = useState("");
-  const [challengeCategory, setChallengeCategory] = useState("");
-  const [teacherName, setTeacherName] = useState("");
+  const [team, setTeam] = useState<TeamDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -48,10 +47,7 @@ function LeanCanvasContent() {
     Promise.all([fetchLeanCanvas(tid), fetchTeam(tid)])
       .then(([c, t]) => {
         setCanvas(c);
-        setTeamName(t.name);
-        setProjectName(t.project_name);
-        setChallengeCategory(t.challenge_category);
-        setTeacherName(t.teacher?.display_name || "");
+        setTeam(t);
       })
       .catch((err) => setError(getErrorMessage(err)))
       .finally(() => setLoading(false));
@@ -63,7 +59,7 @@ function LeanCanvasContent() {
 
   if (loading) return <LoadingState message="Loading Lean Canvas..." />;
 
-  if (error || !canvas) {
+  if (error || !canvas || !team) {
     return (
       <div>
         <Link href={backHref} className="mb-4 inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-primary">
@@ -79,7 +75,12 @@ function LeanCanvasContent() {
     );
   }
 
-  const canEdit = user?.role === "teacher" || user?.role === "student";
+  const assignedTeacher =
+    Boolean(team.viewer_is_team_teacher) || isAssignedTeamTeacher(user, team);
+  const canEdit =
+    user?.role === "teacher" ||
+    user?.role === "student" ||
+    assignedTeacher;
   const canExport = user?.role === "operations";
   const canTranslate = user?.role === "teacher" || user?.role === "operations";
   const canReview = user?.role === "operations";
@@ -87,17 +88,17 @@ function LeanCanvasContent() {
   return (
     <LeanCanvasForm
       canvas={canvas}
-      teamName={teamName}
-      projectName={projectName}
+      teamName={team.name}
+      projectName={team.project_name}
       canEdit={canEdit}
       canExport={canExport}
       canTranslate={canTranslate}
       canReview={canReview}
       exportMeta={{
-        teamName,
-        projectName,
-        challengeCategory,
-        teacherName,
+        teamName: team.name,
+        projectName: team.project_name,
+        challengeCategory: team.challenge_category,
+        teacherName: team.teacher_name || team.teacher.display_name,
       }}
       onUpdated={setCanvas}
       backHref={backHref}

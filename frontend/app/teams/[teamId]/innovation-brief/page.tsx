@@ -10,7 +10,9 @@ import { fetchBrief } from "@/lib/briefApi";
 import { fetchTeam } from "@/lib/teamApi";
 import { getErrorMessage } from "@/lib/apiClient";
 import { useAuthStore } from "@/store/authStore";
+import { isAssignedTeamTeacher } from "@/utils/teamAccess";
 import type { InnovationBrief } from "@/types/brief";
+import type { TeamDetail } from "@/types/team";
 
 export default function InnovationBriefPage() {
   return <AuthGuard><AppShell><BriefContent /></AppShell></AuthGuard>;
@@ -20,10 +22,7 @@ function BriefContent() {
   const { teamId } = useParams();
   const { user } = useAuthStore();
   const [brief, setBrief] = useState<InnovationBrief | null>(null);
-  const [teamName, setTeamName] = useState("");
-  const [projectName, setProjectName] = useState("");
-  const [challengeCategory, setChallengeCategory] = useState("");
-  const [teacherName, setTeacherName] = useState("");
+  const [team, setTeam] = useState<TeamDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -42,10 +41,7 @@ function BriefContent() {
     Promise.all([fetchBrief(tid), fetchTeam(tid)])
       .then(([b, t]) => {
         setBrief(b);
-        setTeamName(t.name);
-        setProjectName(t.project_name);
-        setChallengeCategory(t.challenge_category);
-        setTeacherName(t.teacher?.display_name || "");
+        setTeam(t);
       })
       .catch((err) => setError(getErrorMessage(err)))
       .finally(() => setLoading(false));
@@ -55,7 +51,7 @@ function BriefContent() {
 
   if (loading) return <LoadingState message="Loading Innovation Brief..." />;
 
-  if (error || !brief) {
+  if (error || !brief || !team) {
     return (
       <div>
         <Link href={backHref} className="mb-4 inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-primary">
@@ -69,7 +65,12 @@ function BriefContent() {
     );
   }
 
-  const canEdit = user?.role === "teacher" || user?.role === "student";
+  const assignedTeacher =
+    Boolean(team.viewer_is_team_teacher) || isAssignedTeamTeacher(user, team);
+  const canEdit =
+    user?.role === "teacher" ||
+    user?.role === "student" ||
+    assignedTeacher;
   const canExport = user?.role === "operations";
   const canTranslate = user?.role === "teacher" || user?.role === "operations";
   const canReview = user?.role === "operations";
@@ -77,17 +78,17 @@ function BriefContent() {
   return (
     <InnovationBriefForm
       brief={brief}
-      teamName={teamName}
-      projectName={projectName}
+      teamName={team.name}
+      projectName={team.project_name}
       canEdit={canEdit}
       canExport={canExport}
       canTranslate={canTranslate}
       canReview={canReview}
       exportMeta={{
-        teamName,
-        projectName,
-        challengeCategory,
-        teacherName,
+        teamName: team.name,
+        projectName: team.project_name,
+        challengeCategory: team.challenge_category,
+        teacherName: team.teacher_name || team.teacher.display_name,
       }}
       onUpdated={setBrief}
       backHref={backHref}

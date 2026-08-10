@@ -69,6 +69,7 @@ export interface TeamDetail extends TeamSummary {
   description?: string;
   teacher: { id: number; display_name: string; email: string };
   co_teachers?: { id: number; display_name: string; email: string }[];
+  viewer_is_team_teacher?: boolean;
   members: TeamMember[];
   stats: TeamStats;
 }
