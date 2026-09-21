@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 250 250 248;
+    --foreground: 26 26 26;
+    --card: 255 255 255;
+    --border: 230 230 228;
+    --muted: 120 120 118;
+    --accent: 59 91 219;
+    --accent-light: 99 130 246;
+    --success: 34 197 94;
+    --warning: 234 179 8;
+    --danger: 239 68 68;
+    --purple: 139 92 246;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-[#FAFAF8] text-[#1A1A1A] antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-sm border border-[#E8E8E6] shadow-sm;
+  }
+  .subtle-grid {
+    background-image:
+      linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+}
