@@ -31,11 +31,6 @@ STAFF = (
         "display_name": "郝震煜",
         "role": User.Role.TEACHER,
     },
-    {
-        "username": "ops_xujing",
-        "display_name": "许璟",
-        "role": User.Role.OPERATIONS,
-    },
 )
 
 TEAMS = (
@@ -52,7 +47,7 @@ TEAMS = (
         "project_name": "冷驭",
         "challenge_category": "Energy & Environment",
         "teacher": "王志衡",
-        "operations": "许璟",
+        "operations": "许瑾",
         "description": "",
     },
     {
@@ -60,7 +55,7 @@ TEAMS = (
         "project_name": "隼卫",
         "challenge_category": "Aerospace & Aviation",
         "teacher": "郝震煜",
-        "operations": "许璟",
+        "operations": "许瑾",
         "description": "",
     },
 )

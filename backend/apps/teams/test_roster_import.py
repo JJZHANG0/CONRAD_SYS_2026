@@ -19,6 +19,13 @@ class AddNewRosterCommandTests(TestCase):
             role=User.Role.OPERATIONS,
             display_name="程雪晴",
         )
+        self.xu = User.objects.create_user(
+            username="ops_xu",
+            password="existing-password",
+            email="xujin@conrad.local",
+            role=User.Role.OPERATIONS,
+            display_name="许瑾",
+        )
 
     def test_import_is_complete_and_idempotent(self):
         call_command("add_new_roster")
@@ -44,7 +51,7 @@ class AddNewRosterCommandTests(TestCase):
         self.assertEqual(cold_team.teacher.display_name, "王志衡")
         self.assertEqual(
             list(cold_team.co_teachers.values_list("display_name", flat=True)),
-            ["许璟"],
+            ["许瑾"],
         )
 
         liang = User.objects.get(display_name="梁欣悦")
