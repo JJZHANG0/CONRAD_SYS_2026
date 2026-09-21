@@ -74,15 +74,25 @@ export interface TeamDetail extends TeamSummary {
   stats: TeamStats;
 }
 
+export interface StudentTeamDashboard {
+  id: number;
+  name: string;
+  project_name: string;
+  challenge_category: string;
+  teacher_name: string;
+  my_log_completion: number;
+  teacher_comment_count: number;
+  next_incomplete_day: number;
+  total_log_count: number;
+}
+
 export interface StudentDashboard {
   role: "student";
-  team: {
-    id: number;
-    name: string;
-    project_name: string;
-    challenge_category: string;
-    teacher_name: string;
-  } | null;
+  teams: StudentTeamDashboard[];
+  team: Omit<
+    StudentTeamDashboard,
+    "my_log_completion" | "teacher_comment_count" | "next_incomplete_day" | "total_log_count"
+  > | null;
   my_log_completion: number;
   teacher_comment_count: number;
   next_incomplete_day: number;

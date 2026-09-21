@@ -31,6 +31,11 @@ STAFF = (
         "display_name": "郝震煜",
         "role": User.Role.TEACHER,
     },
+    {
+        "username": "teacher_dubutian",
+        "display_name": "杜步天",
+        "role": User.Role.TEACHER,
+    },
 )
 
 TEAMS = (
@@ -58,6 +63,14 @@ TEAMS = (
         "operations": "许瑾",
         "description": "",
     },
+    {
+        "name": "TEAM「清澜环」",
+        "project_name": "清澜环",
+        "challenge_category": "Water Sustainability",
+        "teacher": "杜步天",
+        "operations": "许瑾",
+        "description": "",
+    },
 )
 
 STUDENTS = (
@@ -69,6 +82,10 @@ STUDENTS = (
     {"username": "student_humengyao", "display_name": "胡孟瑶", "team": "TEAM「隼卫」", "student_role": "CTO"},
     {"username": "student_wangruiyan", "display_name": "王睿妍", "team": "TEAM「隼卫」", "student_role": "CMO"},
     {"username": "student_wangyuan", "display_name": "王元", "team": "TEAM「隼卫」", "student_role": "CTO"},
+    {"username": "student_gaoruiqin", "display_name": "高睿沁", "team": "TEAM「清澜环」", "student_role": ""},
+    {"username": "student_xiechenyue", "display_name": "谢辰悦", "team": "TEAM「清澜环」", "student_role": ""},
+    {"username": "student_chenzilin", "display_name": "陈梓琳", "team": "TEAM「清澜环」", "student_role": "CMO"},
+    {"username": "student_wangtairan", "display_name": "王泰然", "team": "TEAM「清澜环」", "student_role": ""},
 )
 
 
@@ -230,13 +247,6 @@ class Command(BaseCommand):
             student, created = self._create_named_user(student_item, password)
             students_created += int(created)
             team = team_map[item["team"]]
-
-            existing_membership = TeamMember.objects.filter(student=student).first()
-            if existing_membership and existing_membership.team_id != team.id:
-                raise CommandError(
-                    f"{student.display_name} already belongs to "
-                    f"{existing_membership.team.name}"
-                )
 
             membership, member_created = TeamMember.objects.get_or_create(
                 team=team,

@@ -25,6 +25,7 @@ export default function MyLogsPage() {
 function MyLogsContent() {
   const searchParams = useSearchParams();
   const initialDay = Number(searchParams.get("day")) || 1;
+  const requestedTeamId = Number(searchParams.get("team")) || undefined;
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [teamName, setTeamName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -33,18 +34,19 @@ function MyLogsContent() {
   const load = () => {
     setLoading(true);
     setError("");
-    Promise.all([fetchMyLogs(), fetchDashboard()])
-      .then(([l, dash]) => {
-        setLogs(l);
-        if (dash.role === "student" && dash.team) {
-          setTeamName(`${dash.team.name} · ${dash.team.project_name}`);
-        }
+    fetchDashboard()
+      .then(async (dash) => {
+        if (dash.role !== "student") return;
+        const team = dash.teams.find((item) => item.id === requestedTeamId) || dash.teams[0];
+        if (!team) return;
+        setLogs(await fetchMyLogs(team.id));
+        setTeamName(`${team.name} · ${team.project_name}`);
       })
       .catch((err) => setError(getErrorMessage(err)))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [requestedTeamId]);
 
   const handleUpdated = (updated: DailyLog) => {
     setLogs((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));

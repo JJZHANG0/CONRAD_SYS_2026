@@ -2,7 +2,9 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework.test import APITestCase
 
-from .models import Team, TeacherDailyEvaluation
+from apps.logs.models import DailyLog
+
+from .models import Team, TeacherDailyEvaluation, TeamMember
 
 User = get_user_model()
 
@@ -167,3 +169,67 @@ class TeacherDailyEvaluationTests(APITestCase):
             [item["id"] for item in response.data["co_teachers"]],
             [self.operations.id],
         )
+
+
+class StudentMultipleTeamsTests(APITestCase):
+    def setUp(self):
+        self.teacher = User.objects.create_user(
+            username="multi-team-teacher",
+            email="multi-team-teacher@example.com",
+            password="test-password",
+            role=User.Role.TEACHER,
+            display_name="多队老师",
+        )
+        self.student = User.objects.create_user(
+            username="multi-team-student",
+            email="multi-team-student@example.com",
+            password="test-password",
+            role=User.Role.STUDENT,
+            display_name="多队学生",
+        )
+        self.first_team = Team.objects.create(
+            name="First Team",
+            teacher=self.teacher,
+        )
+        self.second_team = Team.objects.create(
+            name="Second Team",
+            teacher=self.teacher,
+        )
+        TeamMember.objects.create(team=self.first_team, student=self.student)
+        TeamMember.objects.create(team=self.second_team, student=self.student)
+        self.first_log = DailyLog.objects.create(
+            team=self.first_team,
+            student=self.student,
+            day=1,
+            work_content="first team work",
+        )
+        self.second_log = DailyLog.objects.create(
+            team=self.second_team,
+            student=self.student,
+            day=1,
+            work_content="second team work",
+        )
+        self.client.force_authenticate(self.student)
+
+    def test_dashboard_and_team_list_include_both_teams(self):
+        dashboard = self.client.get(reverse("dashboard"))
+        team_list = self.client.get(reverse("team-list"))
+
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertEqual(
+            {team["id"] for team in dashboard.data["teams"]},
+            {self.first_team.id, self.second_team.id},
+        )
+        self.assertEqual(
+            {team["id"] for team in team_list.data},
+            {self.first_team.id, self.second_team.id},
+        )
+
+    def test_my_logs_are_isolated_by_team(self):
+        response = self.client.get(
+            reverse("my-logs"),
+            {"team": self.second_team.id},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([log["id"] for log in response.data], [self.second_log.id])

@@ -17,7 +17,7 @@ export default function DashboardPage() {
 
 function DashboardContent() {
   const [data, setData] = useState<DashboardData | null>(null);
-  const [logs, setLogs] = useState<DailyLog[]>([]);
+  const [logsByTeam, setLogsByTeam] = useState<Record<number, DailyLog[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -27,7 +27,11 @@ function DashboardContent() {
     fetchDashboard()
       .then((d) => {
         setData(d);
-        if (d.role === "student") return fetchMyLogs().then(setLogs);
+        if (d.role === "student") {
+          return Promise.all(
+            d.teams.map(async (team) => [team.id, await fetchMyLogs(team.id)] as const),
+          ).then((entries) => setLogsByTeam(Object.fromEntries(entries)));
+        }
       })
       .catch((err) => setError(getErrorMessage(err)))
       .finally(() => setLoading(false));
@@ -59,14 +63,18 @@ function DashboardContent() {
   return (
     <div>
       <StudentDashboardView data={data as StudentDashboard} />
-      {logs.length > 0 && (
-        <div className="mt-8">
-          <h2 className="mb-4 text-lg font-semibold">My Daily Logs</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            {logs.map((log) => <DayLogCard key={log.id} log={log} />)}
+      {(data as StudentDashboard).teams.map((team) => {
+        const logs = logsByTeam[team.id] || [];
+        if (!logs.length) return null;
+        return (
+          <div key={team.id} className="mt-8">
+            <h2 className="mb-4 text-lg font-semibold">{team.name} · My Daily Logs</h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {logs.map((log) => <DayLogCard key={log.id} log={log} teamId={team.id} />)}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })}
     </div>
   );
 }

@@ -66,9 +66,6 @@ class TeamMember(models.Model):
         if self.team_id and self.team.members.count() >= self.MAX_MEMBERS:
             if not self.pk:
                 raise ValidationError("A team can have at most 5 students.")
-        existing = TeamMember.objects.filter(student=self.student).exclude(pk=self.pk)
-        if existing.exists():
-            raise ValidationError("A student can only belong to one team.")
 
     def save(self, *args, **kwargs):
         self.full_clean()

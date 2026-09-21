@@ -11,7 +11,7 @@ interface OperationsDashboardProps {
   onRefresh?: () => void;
 }
 
-export function DayLogCard({ log }: { log: DailyLog }) {
+export function DayLogCard({ log, teamId }: { log: DailyLog; teamId?: number }) {
   const status = log.is_complete ? "complete" : "incomplete";
   const commentStatus = log.has_teacher_comment ? "commented" : "pending";
   return (
@@ -26,7 +26,7 @@ export function DayLogCard({ log }: { log: DailyLog }) {
           <StatusBadge status={commentStatus} />
         </div>
       </div>
-      <Link href={`/my-logs?day=${log.day}`} className="mt-4 block">
+      <Link href={`/my-logs?day=${log.day}${teamId ? `&team=${teamId}` : ""}`} className="mt-4 block">
         <span className="block w-full rounded-xl border border-border bg-white py-2 text-center text-xs font-medium text-text-primary hover:bg-gray-50">
           Edit / View
         </span>
@@ -36,34 +36,38 @@ export function DayLogCard({ log }: { log: DailyLog }) {
 }
 
 export function StudentDashboardView({ data }: { data: StudentDashboard }) {
-  if (!data.team) return <p className="text-text-secondary">You are not assigned to a team yet.</p>;
+  if (!data.teams.length) return <p className="text-text-secondary">You are not assigned to a team yet.</p>;
   return (
     <div>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-text-primary">My Dashboard</h1>
         <p className="mt-1 text-text-secondary">Team Progress, Daily Reflection, Innovation Brief & Lean Canvas</p>
       </div>
-      <Card className="mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-sm text-text-secondary">My Team</p>
-            <h2 className="text-xl font-semibold">{data.team.name}</h2>
-            <p className="text-sm text-text-secondary">{data.team.project_name} · {data.team.challenge_category}</p>
-            <p className="mt-1 text-sm">Teacher: <span className="font-medium text-primary">{data.team.teacher_name}</span></p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/my-logs"><Button>Write Today&apos;s Log</Button></Link>
-            <Link href={`/teams/${data.team.id}/innovation-brief`}><Button variant="secondary">Innovation Brief</Button></Link>
-            <Link href={`/teams/${data.team.id}/lean-canvas`}><Button variant="secondary">Lean Canvas</Button></Link>
-          </div>
-        </div>
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <ProgressBar value={data.my_log_completion} max={data.total_log_count} label="Log Completion" />
-          <p className="text-sm text-text-secondary">Teacher comments: <strong>{data.teacher_comment_count}</strong></p>
-          <p className="text-sm text-text-secondary">Suggested day: <strong className="text-primary">Day {data.next_incomplete_day}</strong></p>
-        </div>
-      </Card>
-      <Link href="/my-logs" className="text-sm text-primary hover:underline">View all logs →</Link>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {data.teams.map((team) => (
+          <Card key={team.id} className="mb-0">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-sm text-text-secondary">My Team</p>
+                <h2 className="text-xl font-semibold">{team.name}</h2>
+                <p className="text-sm text-text-secondary">{team.project_name} · {team.challenge_category}</p>
+                <p className="mt-1 text-sm">Teacher: <span className="font-medium text-primary">{team.teacher_name}</span></p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Link href={`/my-logs?team=${team.id}`}><Button>Write Today&apos;s Log</Button></Link>
+                <Link href={`/teams/${team.id}/innovation-brief`}><Button variant="secondary">Innovation Brief</Button></Link>
+                <Link href={`/teams/${team.id}/lean-canvas`}><Button variant="secondary">Lean Canvas</Button></Link>
+              </div>
+            </div>
+            <div className="mt-6 grid gap-4 sm:grid-cols-3">
+              <ProgressBar value={team.my_log_completion} max={team.total_log_count} label="Log Completion" />
+              <p className="text-sm text-text-secondary">Teacher comments: <strong>{team.teacher_comment_count}</strong></p>
+              <p className="text-sm text-text-secondary">Suggested day: <strong className="text-primary">Day {team.next_incomplete_day}</strong></p>
+            </div>
+            <Link href={`/my-logs?team=${team.id}`} className="mt-4 inline-block text-sm text-primary hover:underline">View all logs →</Link>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

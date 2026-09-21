@@ -43,12 +43,9 @@ class TeamListView(generics.ListAPIView):
             )
         if user.is_teacher:
             return teams_for_teacher(user)
-        membership = TeamMember.objects.filter(student=user).select_related("team").first()
-        if membership:
-            return Team.objects.filter(pk=membership.team_id).prefetch_related(
-                "co_teachers"
-            )
-        return Team.objects.none()
+        return Team.objects.filter(members__student=user).prefetch_related(
+            "co_teachers"
+        ).distinct()
 
 
 class TeamDetailView(generics.RetrieveAPIView):
@@ -110,31 +107,54 @@ class DashboardView(APIView):
                 })
             return Response({"role": "teacher", "teams": team_data})
 
-        membership = TeamMember.objects.filter(student=user).select_related("team", "team__teacher").first()
-        if not membership:
+        memberships = list(
+            TeamMember.objects.filter(student=user)
+            .select_related("team", "team__teacher")
+            .prefetch_related("team__co_teachers")
+            .order_by("created_at", "id")
+        )
+        if not memberships:
             return Response({
                 "role": "student",
+                "teams": [],
                 "team": None,
                 "my_log_completion": 0,
                 "teacher_comment_count": 0,
                 "next_incomplete_day": 1,
+                "total_log_count": 5,
             })
 
-        team = membership.team
-        stats = student_log_stats(user, team)
-        return Response({
-            "role": "student",
-            "team": {
+        team_data = []
+        for membership in memberships:
+            team = membership.team
+            stats = student_log_stats(user, team)
+            team_data.append({
                 "id": team.id,
                 "name": team.name,
                 "project_name": team.project_name,
                 "challenge_category": team.challenge_category,
                 "teacher_name": team.teacher_names_text(),
+                "my_log_completion": stats["log_completion_count"],
+                "teacher_comment_count": stats["teacher_comment_count"],
+                "next_incomplete_day": next_incomplete_day(user, team) or 1,
+                "total_log_count": 5,
+            })
+
+        # Keep the original single-team fields for older frontend builds.
+        primary = team_data[0]
+        return Response({
+            "role": "student",
+            "teams": team_data,
+            "team": {
+                key: primary[key]
+                for key in (
+                    "id", "name", "project_name", "challenge_category", "teacher_name"
+                )
             },
-            "my_log_completion": stats["log_completion_count"],
-            "teacher_comment_count": stats["teacher_comment_count"],
-            "next_incomplete_day": next_incomplete_day(user, team) or 1,
-            "total_log_count": 5,
+            "my_log_completion": primary["my_log_completion"],
+            "teacher_comment_count": primary["teacher_comment_count"],
+            "next_incomplete_day": primary["next_incomplete_day"],
+            "total_log_count": primary["total_log_count"],
         })
 
 

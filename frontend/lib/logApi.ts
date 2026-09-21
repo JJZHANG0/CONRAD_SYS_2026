@@ -1,8 +1,10 @@
 import { apiClient, patchWithRetry } from "./apiClient";
 import type { DailyLog } from "@/types/log";
 
-export async function fetchMyLogs(): Promise<DailyLog[]> {
-  const { data } = await apiClient.get("/my/logs/");
+export async function fetchMyLogs(teamId?: number): Promise<DailyLog[]> {
+  const { data } = await apiClient.get("/my/logs/", {
+    params: teamId ? { team: teamId } : undefined,
+  });
   return data;
 }
 

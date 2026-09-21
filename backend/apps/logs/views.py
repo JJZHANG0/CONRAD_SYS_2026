@@ -27,7 +27,15 @@ def update_log_with_retry(log, serializer_class, request_data):
 
 class MyLogsView(APIView):
     def get(self, request):
-        membership = TeamMember.objects.filter(student=request.user).select_related("team").first()
+        memberships = TeamMember.objects.filter(
+            student=request.user
+        ).select_related("team")
+        team_id = request.query_params.get("team")
+        membership = (
+            get_object_or_404(memberships, team_id=team_id)
+            if team_id
+            else memberships.order_by("created_at", "id").first()
+        )
         if not membership:
             return Response([])
         logs = DailyLog.objects.filter(team=membership.team, student=request.user).order_by("day")

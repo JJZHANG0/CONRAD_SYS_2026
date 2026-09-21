@@ -4,6 +4,7 @@ from django.test import TestCase
 
 from apps.bmc.models import LeanCanvas
 from apps.briefs.models import InnovationBrief
+from apps.logs.models import DailyLog
 from apps.teams.models import Team, TeamMember
 
 
@@ -31,10 +32,10 @@ class AddNewRosterCommandTests(TestCase):
         call_command("add_new_roster")
         call_command("add_new_roster")
 
-        self.assertEqual(Team.objects.count(), 3)
-        self.assertEqual(TeamMember.objects.count(), 8)
-        self.assertEqual(LeanCanvas.objects.count(), 3)
-        self.assertEqual(InnovationBrief.objects.count(), 3)
+        self.assertEqual(Team.objects.count(), 4)
+        self.assertEqual(TeamMember.objects.count(), 12)
+        self.assertEqual(LeanCanvas.objects.count(), 4)
+        self.assertEqual(InnovationBrief.objects.count(), 4)
         self.assertEqual(
             sum(team.daily_logs.count() for team in Team.objects.all()),
             0,
@@ -43,10 +44,14 @@ class AddNewRosterCommandTests(TestCase):
         cold_team = Team.objects.get(name="TEAM「冷驭」")
         falcon_team = Team.objects.get(name="TEAM「隼卫」")
         blue_team = Team.objects.get(name="TEAM「蓝域」")
+        qinglan_team = Team.objects.get(name="TEAM「清澜环」")
 
         self.assertEqual(cold_team.members.count(), 3)
         self.assertEqual(falcon_team.members.count(), 5)
         self.assertEqual(blue_team.members.count(), 0)
+        self.assertEqual(qinglan_team.members.count(), 4)
+        self.assertEqual(qinglan_team.teacher.display_name, "杜步天")
+        self.assertTrue(qinglan_team.co_teachers.filter(pk=self.xu.pk).exists())
         self.assertEqual(blue_team.description, "花名册暂无已缴费学生")
         self.assertEqual(cold_team.teacher.display_name, "王志衡")
         self.assertEqual(
@@ -59,6 +64,55 @@ class AddNewRosterCommandTests(TestCase):
         self.assertEqual(
             TeamMember.objects.get(student=liang).student_role,
             "CMO",
+        )
+        chen = User.objects.get(display_name="陈梓琳")
+        self.assertEqual(
+            TeamMember.objects.get(student=chen).student_role,
+            "CMO",
+        )
+
+    def test_existing_student_can_join_second_team_without_moving_logs(self):
+        existing_teacher = User.objects.create_user(
+            username="teacher-smart-run",
+            password="existing-password",
+            email="teacher-smart-run@example.com",
+            role=User.Role.TEACHER,
+            display_name="智跑老师",
+        )
+        smart_run = Team.objects.create(
+            name="TEAM「智跑」",
+            project_name="智跑",
+            teacher=existing_teacher,
+        )
+        xie = User.objects.create_user(
+            username="谢辰悦",
+            password="existing-password",
+            email="xiechenyue@example.com",
+            role=User.Role.STUDENT,
+            display_name="谢辰悦",
+        )
+        TeamMember.objects.create(team=smart_run, student=xie)
+        existing_log = DailyLog.objects.create(
+            team=smart_run,
+            student=xie,
+            day=1,
+            work_content="原智跑日志内容",
+        )
+
+        call_command("add_new_roster")
+
+        self.assertEqual(xie.team_memberships.count(), 2)
+        self.assertTrue(
+            xie.team_memberships.filter(team__name="TEAM「清澜环」").exists()
+        )
+        existing_log.refresh_from_db()
+        self.assertEqual(existing_log.team, smart_run)
+        self.assertEqual(existing_log.work_content, "原智跑日志内容")
+        self.assertFalse(
+            DailyLog.objects.filter(
+                team__name="TEAM「清澜环」",
+                student=xie,
+            ).exists()
         )
 
     def test_existing_normalized_team_and_content_are_preserved(self):
