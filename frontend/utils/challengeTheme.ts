@@ -61,14 +61,30 @@ const THEMES: Record<string, ChallengeTheme> = {
   },
 };
 
-export function getChallengeTheme(category = ""): ChallengeTheme {
+const CHALLENGE_LOGOS: Record<string, string> = {
+  water: "/challenge-icons/water-sustainability.png",
+  health: "/challenge-icons/health-nutrition.png",
+  energy: "/challenge-icons/energy-environment.png",
+  cyber: "/challenge-icons/cyber-security.png",
+  aerospace: "/challenge-icons/aerospace-aviation.png",
+};
+
+function getChallengeKey(category = ""): keyof typeof THEMES {
   const value = category.toLocaleLowerCase();
-  if (value.includes("water")) return THEMES.water;
-  if (value.includes("health") || value.includes("nutrition")) return THEMES.health;
-  if (value.includes("energy") || value.includes("environment")) return THEMES.energy;
-  if (value.includes("cyber") || value.includes("security")) return THEMES.cyber;
-  if (value.includes("aerospace") || value.includes("aviation")) return THEMES.aerospace;
-  return THEMES.default;
+  if (value.includes("water")) return "water";
+  if (value.includes("health") || value.includes("nutrition")) return "health";
+  if (value.includes("energy") || value.includes("environment")) return "energy";
+  if (value.includes("cyber") || value.includes("security")) return "cyber";
+  if (value.includes("aerospace") || value.includes("aviation")) return "aerospace";
+  return "default";
+}
+
+export function getChallengeTheme(category = ""): ChallengeTheme {
+  return THEMES[getChallengeKey(category)];
+}
+
+export function getChallengeLogo(category = ""): string | null {
+  return CHALLENGE_LOGOS[getChallengeKey(category)] || null;
 }
 
 export function getChallengeThemeStyle(category = ""): ChallengeThemeStyle {

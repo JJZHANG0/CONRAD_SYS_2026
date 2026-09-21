@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -14,7 +15,7 @@ import { Card, Button, StatusBadge, ProgressBar, EmptyState } from "@/components
 import { OperationsManagementPanel } from "@/components/operations/OperationsManagementPanel";
 import { BulkDocumentExport } from "@/components/operations/BulkDocumentExport";
 import { TeamProductLink } from "@/components/team/TeamProductLinks";
-import { getChallengeTheme, getChallengeThemeStyle } from "@/utils/challengeTheme";
+import { getChallengeLogo, getChallengeTheme, getChallengeThemeStyle } from "@/utils/challengeTheme";
 import type { DailyLog } from "@/types/log";
 import type { StudentDashboard, TeacherDashboard, OperationsDashboard, TeamStats, TeamSummary } from "@/types/team";
 
@@ -58,9 +59,20 @@ export function StudentDashboardView({ data }: { data: StudentDashboard }) {
       <div className="grid gap-6 lg:grid-cols-2">
         {data.teams.map((team) => {
           const theme = getChallengeTheme(team.challenge_category);
+          const challengeLogo = getChallengeLogo(team.challenge_category);
           return (
-          <Card key={team.id} className="team-category-card mb-0" style={getChallengeThemeStyle(team.challenge_category)}>
-            <div className="flex flex-wrap items-center justify-between gap-4">
+          <Card key={team.id} className="team-category-card relative mb-0 overflow-hidden" style={getChallengeThemeStyle(team.challenge_category)}>
+            {challengeLogo && (
+              <Image
+                src={challengeLogo}
+                alt=""
+                width={144}
+                height={144}
+                className="pointer-events-none absolute right-6 top-8 h-28 w-28 object-contain opacity-50"
+                aria-hidden="true"
+              />
+            )}
+            <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-medium" style={{ color: theme.deep }}>My Team</p>
                 <h2 className="text-xl font-semibold">{team.name}</h2>
@@ -93,27 +105,38 @@ export function StudentDashboardView({ data }: { data: StudentDashboard }) {
 
 export function TeamCard({ team }: { team: TeamSummary & TeamStats }) {
   const theme = getChallengeTheme(team.challenge_category);
+  const challengeLogo = getChallengeLogo(team.challenge_category);
   return (
     <div className="group block h-full">
       <Card hover className="team-category-card relative flex h-full flex-col !p-5" style={getChallengeThemeStyle(team.challenge_category)}>
         <Link href={`/teams/${team.id}`} className="absolute inset-0 z-0 rounded-xl" aria-label={`查看${team.name}详情`} />
+        {challengeLogo && (
+          <Image
+            src={challengeLogo}
+            alt=""
+            width={160}
+            height={160}
+            className="pointer-events-none absolute right-5 top-14 z-[1] h-28 w-28 object-contain opacity-50 sm:h-32 sm:w-32"
+            aria-hidden="true"
+          />
+        )}
         <div className="pointer-events-none relative z-10 flex h-full flex-col">
-        <div className="flex items-start justify-between gap-3">
+        <div className="relative min-h-[136px] pr-[42%]">
           <div className="min-w-0">
             <span className="team-category-badge inline-flex max-w-full rounded-md border px-2 py-1 text-[10px] font-semibold">
               <span className="truncate">{team.challenge_category || "Uncategorized"}</span>
             </span>
             <h3 className="mt-3 truncate text-lg font-semibold text-text-primary">{team.name}</h3>
             <p className="mt-0.5 truncate text-sm text-text-secondary">{team.project_name}</p>
+            {team.teacher_name && (
+              <p className="mt-3 truncate text-xs text-text-secondary">导师 · {team.teacher_name}</p>
+            )}
           </div>
-          <span className="team-category-action flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border bg-white/70 transition-colors">
+          <span className="team-category-action absolute -right-0.5 top-0 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border bg-white/70 transition-colors">
             <ArrowUpRight size={16} />
           </span>
         </div>
-        {team.teacher_name && (
-          <p className="mt-3 truncate text-xs text-text-secondary">导师 · {team.teacher_name}</p>
-        )}
-        <div className="pointer-events-auto mt-4 grid grid-cols-2 gap-2">
+        <div className="pointer-events-auto mt-1 grid grid-cols-2 gap-2">
           <TeamProductLink kind="website" url={team.product_website_url} compact />
           <TeamProductLink kind="video" url={team.product_video_url} compact />
         </div>
