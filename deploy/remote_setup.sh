@@ -42,11 +42,13 @@ python3 -m venv venv
 # shellcheck disable=SC1091
 source venv/bin/activate
 pip install -r requirements.txt
-python manage.py migrate
-TEAM_COUNT=$(python -c "import django,os; os.environ.setdefault('DJANGO_SETTINGS_MODULE','config.settings'); django.setup(); from teams.models import Team; print(Team.objects.count())")
-if [ "$TEAM_COUNT" = "0" ] && [ -f data_fixture.json ]; then
-  python manage.py loaddata data_fixture.json || true
+if [ -f db.sqlite3 ]; then
+  BACKUP="db.sqlite3.bak-$(date +%Y%m%d%H%M%S)"
+  cp db.sqlite3 "$BACKUP"
+  echo "==> Backed up existing database to ${APP_DIR}/backend/${BACKUP}"
 fi
+python manage.py migrate
+python manage.py seed_data
 
 # Frontend on 3010
 cd "$APP_DIR/frontend"

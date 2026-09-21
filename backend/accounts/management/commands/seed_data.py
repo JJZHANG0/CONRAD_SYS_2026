@@ -358,19 +358,27 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--force', action='store_true', help='清除现有队伍数据后重新导入')
+        parser.add_argument(
+            '--update-existing',
+            action='store_true',
+            help='更新已存在队伍的基础表格字段；默认只创建缺失队伍以保护线上运营数据',
+        )
 
     def handle(self, *args, **options):
-        if Team.objects.exists() and not options['force']:
-            self.stdout.write('数据已存在，请使用 --force 重新导入')
-            return
-
         if options['force']:
             self._clear_team_data()
 
         self._ensure_admin_and_stages()
         staff = self._ensure_staff()
-        self._import_teams(staff)
-        self.stdout.write(self.style.SUCCESS(f'成功导入 {len(TEAM_ROWS)} 支队伍！'))
+        created, updated, skipped = self._import_teams(
+            staff,
+            update_existing=options['update_existing'] or options['force'],
+        )
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'队伍同步完成：新增 {created} 支，更新 {updated} 支，保留 {skipped} 支。'
+            )
+        )
 
     def _clear_team_data(self):
         self.stdout.write('清除现有队伍数据...')
@@ -440,127 +448,154 @@ class Command(BaseCommand):
             return stages[1]
         return stages[0]
 
-    def _import_teams(self, staff):
-        stages = list(Stage.objects.order_by('order'))
-        now = timezone.now()
+    def _team_defaults(self, row, staff, stages):
+        proj = extract_project_name(row['team_name'])
+        s1, s2, s3 = row['stage1'], row['stage2'], row['stage3']
+        coach = staff.get(row['coach'])
+        ops = staff.get(row['ops'])
+        offline = staff.get(row['offline_lead']) if row['offline_lead'] else None
+        current_stage = self._infer_stage(stages, s1, s2, s3)
+        completion = round((s1 + s2 + s3) / 3, 1)
+
+        risk = 'normal'
+        if s1 < 10 and row.get('offline_end') and self._parse_date(row['offline_end']):
+            if self._parse_date(row['offline_end']) < date(2026, 9, 1):
+                risk = 'attention'
+
+        return {
+            'project_name_cn': proj,
+            'project_name_en': proj,
+            'track': TRACK_MAP.get(row['track'], 'health'),
+            'risk_status': risk,
+            'project_manager': ops,
+            'lead_mentor': coach,
+            'offline_lead': offline,
+            'current_stage': current_stage,
+            'deliverable_completion_rate': completion,
+            'mentor_score': min(70 + s1 // 5, 95),
+            'website_status': row['website_status'],
+            'rnd_approved': row['rnd_approved'],
+            'crm_number': row['crm_number'],
+            'offline_start': self._parse_date(row['offline_start']),
+            'offline_end': self._parse_date(row['offline_end']),
+            'offline_city': row['offline_city'],
+            'classroom': row['classroom'],
+            'project_proposal': row['project_proposal'],
+            'budget_doc': row['budget_doc'],
+            'okr_link': row['okr_link'],
+            'team_chat_group': row['team_chat_group'],
+            'task_tracking_doc': row['task_tracking_doc'],
+            'project_log_doc': row['project_log_doc'],
+            'stage1_progress': s1,
+            'stage2_progress': s2,
+            'stage3_progress': s3,
+            'ceo_status': row['ceo_status'],
+            'cpo_status': row['cpo_status'],
+            'cto_status': row['cto_status'],
+            'cmo_status': row['cmo_status'],
+            'cfo_status': row['cfo_status'],
+        }
+
+    def _create_related_seed_records(self, team, row, staff, stages):
+        proj = extract_project_name(row['team_name'])
+        s1, s2, s3 = row['stage1'], row['stage2'], row['stage3']
+        coach = staff.get(row['coach'])
+        ops = staff.get(row['ops'])
+        current_stage = self._infer_stage(stages, s1, s2, s3)
         statuses_pool = ['approved', 'submitted', 'in_progress', 'not_started']
 
-        for row in TEAM_ROWS:
-            proj = extract_project_name(row['team_name'])
-            s1, s2, s3 = row['stage1'], row['stage2'], row['stage3']
-            coach = staff.get(row['coach'])
-            ops = staff.get(row['ops'])
-            offline = staff.get(row['offline_lead']) if row['offline_lead'] else None
-            current_stage = self._infer_stage(stages, s1, s2, s3)
-            completion = round((s1 + s2 + s3) / 3, 1)
+        for label, key in zip(ROLE_LABELS, ROLE_KEYS):
+            status = row[key]
+            if status:
+                Student.objects.create(
+                    team=team,
+                    name=f'{proj}-{label}',
+                    role_in_team=label,
+                    notes=status,
+                    grade='高二',
+                    school='国际学校',
+                )
 
-            risk = 'normal'
-            if s1 < 10 and row.get('offline_end') and self._parse_date(row['offline_end']):
-                if self._parse_date(row['offline_end']) < date(2026, 9, 1):
-                    risk = 'attention'
+        for stage_idx, titles in DELIVERABLE_TEMPLATES.items():
+            for i, title in enumerate(titles):
+                if current_stage.order < stage_idx + 1:
+                    status = 'not_started'
+                elif current_stage.order == stage_idx + 1:
+                    progress = [s1, s2, s3][stage_idx]
+                    if progress >= 50:
+                        status = statuses_pool[i % 2]
+                    elif progress > 0:
+                        status = 'in_progress'
+                    else:
+                        status = 'not_started'
+                else:
+                    status = 'approved'
+                Deliverable.objects.create(
+                    team=team,
+                    stage=stages[stage_idx],
+                    title=title,
+                    status=status,
+                    owner=coach,
+                    due_date=date(2027, stage_idx + 1, min(15 + i * 5, 28)),
+                    score=8.5 if status == 'approved' else None,
+                )
 
-            team = Team.objects.create(
-                team_name=row['team_name'],
-                project_name_cn=proj,
-                project_name_en=proj,
-                track=TRACK_MAP.get(row['track'], 'health'),
-                risk_status=risk,
-                project_manager=ops,
-                lead_mentor=coach,
-                offline_lead=offline,
-                current_stage=current_stage,
-                deliverable_completion_rate=completion,
-                mentor_score=min(70 + s1 // 5, 95),
-                website_status=row['website_status'],
-                rnd_approved=row['rnd_approved'],
-                crm_number=row['crm_number'],
-                offline_start=self._parse_date(row['offline_start']),
-                offline_end=self._parse_date(row['offline_end']),
-                offline_city=row['offline_city'],
-                classroom=row['classroom'],
-                project_proposal=row['project_proposal'],
-                budget_doc=row['budget_doc'],
-                okr_link=row['okr_link'],
-                team_chat_group=row['team_chat_group'],
-                task_tracking_doc=row['task_tracking_doc'],
-                project_log_doc=row['project_log_doc'],
-                stage1_progress=s1,
-                stage2_progress=s2,
-                stage3_progress=s3,
-                ceo_status=row['ceo_status'],
-                cpo_status=row['cpo_status'],
-                cto_status=row['cto_status'],
-                cmo_status=row['cmo_status'],
-                cfo_status=row['cfo_status'],
+        if coach and row['offline_start']:
+            start = self._parse_date(row['offline_start'])
+            if start:
+                CalendarEvent.objects.create(
+                    team=team,
+                    mentor=coach,
+                    start_time=timezone.make_aware(
+                        datetime.combine(start, datetime.min.time().replace(hour=9))
+                    ),
+                    end_time=timezone.make_aware(
+                        datetime.combine(start, datetime.min.time().replace(hour=17))
+                    ),
+                    topic=f'{proj} 线下集训',
+                    stage=current_stage,
+                )
+
+        if coach and ops:
+            TeacherEvaluation.objects.create(
+                mentor=coach,
+                team=team,
+                score_a=s1 * 0.6,
+                score_b=12,
+                score_c=8,
+                score_d=4,
+                score_e=7,
+                evaluated_by=ops,
+                comments=f'{proj}项目持续推进中',
             )
 
-            for label, key in zip(ROLE_LABELS, ROLE_KEYS):
-                status = row[key]
-                if status:
-                    Student.objects.create(
-                        team=team,
-                        name=f'{proj}-{label}',
-                        role_in_team=label,
-                        notes=status,
-                        grade='高二',
-                        school='国际学校',
-                    )
+    def _import_teams(self, staff, update_existing=False):
+        stages = list(Stage.objects.order_by('order'))
+        created = 0
+        updated = 0
+        skipped = 0
 
-            for stage_idx, titles in DELIVERABLE_TEMPLATES.items():
-                for i, title in enumerate(titles):
-                    if current_stage.order < stage_idx + 1:
-                        status = 'not_started'
-                    elif current_stage.order == stage_idx + 1:
-                        progress = [s1, s2, s3][stage_idx]
-                        if progress >= 50:
-                            status = statuses_pool[i % 2]
-                        elif progress > 0:
-                            status = 'in_progress'
-                        else:
-                            status = 'not_started'
-                    else:
-                        status = 'approved'
-                    Deliverable.objects.create(
-                        team=team,
-                        stage=stages[stage_idx],
-                        title=title,
-                        status=status,
-                        owner=coach,
-                        due_date=date(2027, stage_idx + 1, min(15 + i * 5, 28)),
-                        score=8.5 if status == 'approved' else None,
-                    )
+        for row in TEAM_ROWS:
+            defaults = self._team_defaults(row, staff, stages)
+            team, was_created = Team.objects.get_or_create(
+                team_name=row['team_name'],
+                defaults=defaults,
+            )
 
-            if coach and row['offline_start']:
-                start = self._parse_date(row['offline_start'])
-                if start:
-                    CalendarEvent.objects.create(
-                        team=team,
-                        mentor=coach,
-                        start_time=timezone.make_aware(
-                            datetime.combine(start, datetime.min.time().replace(hour=9))
-                        ),
-                        end_time=timezone.make_aware(
-                            datetime.combine(start, datetime.min.time().replace(hour=17))
-                        ),
-                        topic=f'{proj} 线下集训',
-                        stage=current_stage,
-                    )
-
-            if coach and ops:
-                TeacherEvaluation.objects.create(
-                    mentor=coach,
-                    team=team,
-                    score_a=s1 * 0.6,
-                    score_b=12,
-                    score_c=8,
-                    score_d=4,
-                    score_e=7,
-                    evaluated_by=ops,
-                    comments=f'{proj}项目持续推进中',
-                )
+            if was_created:
+                self._create_related_seed_records(team, row, staff, stages)
+                created += 1
+            elif update_existing:
+                for field, value in defaults.items():
+                    setattr(team, field, value)
+                team.save(update_fields=[*defaults.keys(), 'updated_at'])
+                updated += 1
+            else:
+                skipped += 1
 
         ActivityLog.objects.create(
             action='import',
-            description=f'系统导入 {len(TEAM_ROWS)} 支康莱德队伍完整表格数据',
+            description=f'系统同步康莱德队伍数据：新增 {created}，更新 {updated}，保留 {skipped}',
             user=User.objects.get(username='admin'),
         )
+        return created, updated, skipped
