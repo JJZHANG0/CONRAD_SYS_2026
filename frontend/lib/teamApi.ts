@@ -1,6 +1,7 @@
 import { apiClient, patchWithRetry } from "./apiClient";
 import type {
   TeamDetail,
+  TeamProductLinks,
   TeamSummary,
   TeacherDailyEvaluation,
   TeacherEvaluationCheck,
@@ -34,6 +35,16 @@ export async function updateTeacherEvaluation(
 ): Promise<TeacherDailyEvaluation> {
   return patchWithRetry<TeacherDailyEvaluation>(
     `/teams/${teamId}/teacher-evaluations/${day}/`,
+    payload
+  );
+}
+
+export async function updateTeamProductLinks(
+  teamId: number,
+  payload: Pick<TeamProductLinks, "product_website_url" | "product_video_url">
+): Promise<TeamProductLinks> {
+  return patchWithRetry<TeamProductLinks>(
+    `/teams/${teamId}/product-links/`,
     payload
   );
 }

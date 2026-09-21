@@ -90,6 +90,8 @@ class TeamListSerializer(serializers.ModelSerializer):
             "name",
             "project_name",
             "challenge_category",
+            "product_website_url",
+            "product_video_url",
             "teacher_name",
             "co_teacher_names",
             "stats",
@@ -128,6 +130,8 @@ class TeamDetailSerializer(serializers.ModelSerializer):
             "project_name",
             "challenge_category",
             "description",
+            "product_website_url",
+            "product_video_url",
             "teacher",
             "co_teachers",
             "teacher_name",
@@ -149,3 +153,21 @@ class TeamDetailSerializer(serializers.ModelSerializer):
         content = team_content_stats(obj)
         evaluation = visible_teacher_evaluation_stats(self, obj)
         return {**log_stats, **content, **evaluation}
+
+
+class TeamProductLinksSerializer(serializers.ModelSerializer):
+    product_website_url = serializers.URLField(
+        allow_blank=True,
+        required=False,
+        max_length=500,
+    )
+    product_video_url = serializers.URLField(
+        allow_blank=True,
+        required=False,
+        max_length=500,
+    )
+
+    class Meta:
+        model = Team
+        fields = ("product_website_url", "product_video_url", "updated_at")
+        read_only_fields = ("updated_at",)

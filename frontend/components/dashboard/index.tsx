@@ -13,6 +13,7 @@ import {
 import { Card, Button, StatusBadge, ProgressBar, EmptyState } from "@/components/ui";
 import { OperationsManagementPanel } from "@/components/operations/OperationsManagementPanel";
 import { BulkDocumentExport } from "@/components/operations/BulkDocumentExport";
+import { TeamProductLink } from "@/components/team/TeamProductLinks";
 import { getChallengeTheme, getChallengeThemeStyle } from "@/utils/challengeTheme";
 import type { DailyLog } from "@/types/log";
 import type { StudentDashboard, TeacherDashboard, OperationsDashboard, TeamStats, TeamSummary } from "@/types/team";
@@ -65,6 +66,10 @@ export function StudentDashboardView({ data }: { data: StudentDashboard }) {
                 <h2 className="text-xl font-semibold">{team.name}</h2>
                 <p className="text-sm text-text-secondary">{team.project_name} · {team.challenge_category}</p>
                 <p className="mt-1 text-sm">Teacher: <span className="font-medium text-primary">{team.teacher_name}</span></p>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <TeamProductLink kind="website" url={team.product_website_url} compact />
+                  <TeamProductLink kind="video" url={team.product_video_url} compact />
+                </div>
               </div>
               <div className="flex flex-wrap gap-3">
                 <Link href={`/my-logs?team=${team.id}`}><Button style={{ backgroundColor: theme.accent, borderColor: theme.accent }}>Write Today&apos;s Log</Button></Link>
@@ -89,8 +94,10 @@ export function StudentDashboardView({ data }: { data: StudentDashboard }) {
 export function TeamCard({ team }: { team: TeamSummary & TeamStats }) {
   const theme = getChallengeTheme(team.challenge_category);
   return (
-    <Link href={`/teams/${team.id}`} className="group block h-full">
-      <Card hover className="team-category-card flex h-full flex-col !p-5" style={getChallengeThemeStyle(team.challenge_category)}>
+    <div className="group block h-full">
+      <Card hover className="team-category-card relative flex h-full flex-col !p-5" style={getChallengeThemeStyle(team.challenge_category)}>
+        <Link href={`/teams/${team.id}`} className="absolute inset-0 z-0 rounded-xl" aria-label={`查看${team.name}详情`} />
+        <div className="pointer-events-none relative z-10 flex h-full flex-col">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <span className="team-category-badge inline-flex max-w-full rounded-md border px-2 py-1 text-[10px] font-semibold">
@@ -106,6 +113,10 @@ export function TeamCard({ team }: { team: TeamSummary & TeamStats }) {
         {team.teacher_name && (
           <p className="mt-3 truncate text-xs text-text-secondary">导师 · {team.teacher_name}</p>
         )}
+        <div className="pointer-events-auto mt-4 grid grid-cols-2 gap-2">
+          <TeamProductLink kind="website" url={team.product_website_url} compact />
+          <TeamProductLink kind="video" url={team.product_video_url} compact />
+        </div>
         <div className="mt-5 grid grid-cols-3 gap-2 border-y border-border/70 py-3">
           <div><strong className="team-category-value block text-sm tabular-nums">{team.member_count}/5</strong><span className="text-[10px] text-text-secondary">成员</span></div>
           <div><strong className="team-category-value block text-sm tabular-nums">{team.bmc_completion_count ?? 0}/{team.bmc_total || 12}</strong><span className="text-[10px] text-text-secondary">BMC</span></div>
@@ -115,8 +126,9 @@ export function TeamCard({ team }: { team: TeamSummary & TeamStats }) {
           <ProgressBar value={team.member_count} max={5} label="Members" color={theme.accent} />
           <ProgressBar value={team.log_completion_count} max={team.total_log_count || 1} label="Student Logs" color={theme.accent} />
         </div>
+        </div>
       </Card>
-    </Link>
+    </div>
   );
 }
 

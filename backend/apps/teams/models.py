@@ -21,6 +21,8 @@ class Team(models.Model):
         related_name="co_taught_teams",
     )
     description = models.TextField(blank=True)
+    product_website_url = models.URLField(max_length=500, blank=True)
+    product_video_url = models.URLField(max_length=500, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

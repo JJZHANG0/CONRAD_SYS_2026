@@ -10,6 +10,7 @@ from apps.teams.models import Team, TeacherDailyEvaluation, TeamMember
 
 from .permissions import user_can_access_team, user_is_team_teacher
 from .serializers import (
+    TeamProductLinksSerializer,
     TeacherDailyEvaluationSerializer,
     TeamDetailSerializer,
     TeamListSerializer,
@@ -83,6 +84,8 @@ class DashboardView(APIView):
                     "name": team.name,
                     "project_name": team.project_name,
                     "challenge_category": team.challenge_category,
+                    "product_website_url": team.product_website_url,
+                    "product_video_url": team.product_video_url,
                     "teacher_name": team.teacher_names_text(),
                     **stats,
                 })
@@ -102,6 +105,8 @@ class DashboardView(APIView):
                     "name": team.name,
                     "project_name": team.project_name,
                     "challenge_category": team.challenge_category,
+                    "product_website_url": team.product_website_url,
+                    "product_video_url": team.product_video_url,
                     "teacher_name": team.teacher_names_text(),
                     **stats,
                 })
@@ -133,6 +138,8 @@ class DashboardView(APIView):
                 "name": team.name,
                 "project_name": team.project_name,
                 "challenge_category": team.challenge_category,
+                "product_website_url": team.product_website_url,
+                "product_video_url": team.product_video_url,
                 "teacher_name": team.teacher_names_text(),
                 "my_log_completion": stats["log_completion_count"],
                 "teacher_comment_count": stats["teacher_comment_count"],
@@ -148,7 +155,8 @@ class DashboardView(APIView):
             "team": {
                 key: primary[key]
                 for key in (
-                    "id", "name", "project_name", "challenge_category", "teacher_name"
+                    "id", "name", "project_name", "challenge_category",
+                    "product_website_url", "product_video_url", "teacher_name"
                 )
             },
             "my_log_completion": primary["my_log_completion"],
@@ -156,6 +164,29 @@ class DashboardView(APIView):
             "next_incomplete_day": primary["next_incomplete_day"],
             "total_log_count": primary["total_log_count"],
         })
+
+
+class TeamProductLinksView(APIView):
+    def patch(self, request, team_id):
+        team = get_object_or_404(Team, pk=team_id)
+        if not (request.user.is_operations or user_is_team_teacher(request.user, team)):
+            return Response(
+                {"detail": "Only operations or an assigned teacher can edit product links."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        def save_links():
+            serializer = TeamProductLinksSerializer(
+                team,
+                data=request.data,
+                partial=True,
+            )
+            serializer.is_valid(raise_exception=True)
+            saved = run_with_db_retry(serializer.save)
+            saved.refresh_from_db()
+            return Response(TeamProductLinksSerializer(saved).data)
+
+        return handle_form_database_errors(save_links)
 
 
 class TeacherEvaluationListView(APIView):

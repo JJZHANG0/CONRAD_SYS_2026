@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AuthGuard, AppShell } from "@/components/layout/AppShell";
 import { TeamHeader, TeamMemberCard } from "@/components/team";
+import { TeamProductLinksPanel } from "@/components/team/TeamProductLinks";
 import { TeacherEvaluationPanel } from "@/components/team/TeacherEvaluationPanel";
 import { LoadingState, Button } from "@/components/ui";
 import { fetchTeam } from "@/lib/teamApi";
@@ -63,6 +64,14 @@ function TeamContent() {
       <TeamHeader
         team={team}
         canExportTeamLogs={user?.role === "operations"}
+      />
+      <TeamProductLinksPanel
+        teamId={team.id}
+        links={team}
+        canEdit={user?.role === "operations" || team.viewer_is_team_teacher === true}
+        onSaved={(links) => {
+          setTeam((current) => current ? { ...current, ...links } : current);
+        }}
       />
       {(user?.role === "operations" || user?.role === "teacher") && (
         <TeacherEvaluationPanel

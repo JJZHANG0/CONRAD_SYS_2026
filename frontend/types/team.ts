@@ -42,6 +42,8 @@ export interface TeamSummary {
   name: string;
   project_name: string;
   challenge_category: string;
+  product_website_url: string;
+  product_video_url: string;
   teacher_name?: string;
   co_teacher_names?: string[];
   stats?: TeamStats;
@@ -79,11 +81,19 @@ export interface StudentTeamDashboard {
   name: string;
   project_name: string;
   challenge_category: string;
+  product_website_url: string;
+  product_video_url: string;
   teacher_name: string;
   my_log_completion: number;
   teacher_comment_count: number;
   next_incomplete_day: number;
   total_log_count: number;
+}
+
+export interface TeamProductLinks {
+  product_website_url: string;
+  product_video_url: string;
+  updated_at?: string;
 }
 
 export interface StudentDashboard {

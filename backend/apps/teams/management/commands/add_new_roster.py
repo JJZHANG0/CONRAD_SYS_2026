@@ -67,7 +67,7 @@ TEAMS = (
     {
         "name": "TEAM「清澜环」",
         "project_name": "清澜环",
-        "challenge_category": "Water Sustainability",
+        "challenge_category": "Energy & Environment",
         "teacher": "杜步天",
         "operations": "许瑾",
         "description": "",

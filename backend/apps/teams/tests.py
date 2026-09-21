@@ -233,3 +233,92 @@ class StudentMultipleTeamsTests(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual([log["id"] for log in response.data], [self.second_log.id])
+
+
+class TeamProductLinksTests(APITestCase):
+    def setUp(self):
+        self.operations = User.objects.create_user(
+            username="ops-links",
+            email="ops-links@example.com",
+            password="test-password",
+            role=User.Role.OPERATIONS,
+        )
+        self.teacher = User.objects.create_user(
+            username="teacher-links",
+            email="teacher-links@example.com",
+            password="test-password",
+            role=User.Role.TEACHER,
+        )
+        self.other_teacher = User.objects.create_user(
+            username="other-teacher-links",
+            email="other-teacher-links@example.com",
+            password="test-password",
+            role=User.Role.TEACHER,
+        )
+        self.student = User.objects.create_user(
+            username="student-links",
+            email="student-links@example.com",
+            password="test-password",
+            role=User.Role.STUDENT,
+        )
+        self.team = Team.objects.create(name="Product Links Team", teacher=self.teacher)
+        TeamMember.objects.create(team=self.team, student=self.student)
+        self.url = reverse("team-product-links", args=[self.team.id])
+
+    def test_operations_can_save_product_links(self):
+        self.client.force_authenticate(self.operations)
+        response = self.client.patch(
+            self.url,
+            {
+                "product_website_url": "https://example.com/product",
+                "product_video_url": "https://video.example.com/demo",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.team.refresh_from_db()
+        self.assertEqual(self.team.product_website_url, "https://example.com/product")
+        self.assertEqual(self.team.product_video_url, "https://video.example.com/demo")
+
+    def test_assigned_teacher_can_update_and_clear_links(self):
+        self.team.product_website_url = "https://old.example.com"
+        self.team.save(update_fields=["product_website_url"])
+        self.client.force_authenticate(self.teacher)
+
+        response = self.client.patch(
+            self.url,
+            {"product_website_url": "", "product_video_url": "https://example.com/video"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.team.refresh_from_db()
+        self.assertEqual(self.team.product_website_url, "")
+        self.assertEqual(self.team.product_video_url, "https://example.com/video")
+
+    def test_unassigned_teacher_and_student_cannot_edit_links(self):
+        for user in (self.other_teacher, self.student):
+            self.client.force_authenticate(user)
+            response = self.client.patch(
+                self.url,
+                {"product_website_url": "https://forbidden.example.com"},
+                format="json",
+            )
+            self.assertEqual(response.status_code, 403)
+
+    def test_dashboard_and_detail_include_product_links(self):
+        self.team.product_website_url = "https://example.com/product"
+        self.team.product_video_url = "https://example.com/video"
+        self.team.save(update_fields=["product_website_url", "product_video_url"])
+        self.client.force_authenticate(self.student)
+
+        dashboard = self.client.get(reverse("dashboard"))
+        detail = self.client.get(reverse("team-detail", args=[self.team.id]))
+
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(dashboard.data["teams"][0]["product_website_url"], "https://example.com/product")
+        self.assertEqual(dashboard.data["teams"][0]["product_video_url"], "https://example.com/video")
+        self.assertEqual(detail.data["product_website_url"], "https://example.com/product")
+        self.assertEqual(detail.data["product_video_url"], "https://example.com/video")

@@ -12,11 +12,17 @@ from .views import (
     TeacherEvaluationUpdateView,
     TeamDetailView,
     TeamListView,
+    TeamProductLinksView,
 )
 
 urlpatterns = [
     path("teams/", TeamListView.as_view(), name="team-list"),
     path("teams/<int:team_id>/", TeamDetailView.as_view(), name="team-detail"),
+    path(
+        "teams/<int:team_id>/product-links/",
+        TeamProductLinksView.as_view(),
+        name="team-product-links",
+    ),
     path(
         "teams/<int:team_id>/teacher-evaluations/",
         TeacherEvaluationListView.as_view(),
