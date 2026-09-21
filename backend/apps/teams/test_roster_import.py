@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import TestCase
+from django.urls import reverse
+from rest_framework.test import APIClient
 
 from apps.bmc.models import LeanCanvas
 from apps.briefs.models import InnovationBrief
@@ -38,8 +40,12 @@ class AddNewRosterCommandTests(TestCase):
         self.assertEqual(InnovationBrief.objects.count(), 4)
         self.assertEqual(
             sum(team.daily_logs.count() for team in Team.objects.all()),
-            0,
+            60,
         )
+        self.assertFalse(DailyLog.objects.filter(work_content__gt="").exists())
+        self.assertFalse(DailyLog.objects.filter(task_completion__gt="").exists())
+        self.assertFalse(DailyLog.objects.filter(problems_solutions__gt="").exists())
+        self.assertFalse(DailyLog.objects.filter(reflection__gt="").exists())
 
         cold_team = Team.objects.get(name="TEAM「冷驭」")
         falcon_team = Team.objects.get(name="TEAM「隼卫」")
@@ -70,6 +76,14 @@ class AddNewRosterCommandTests(TestCase):
             TeamMember.objects.get(student=chen).student_role,
             "CMO",
         )
+
+        gaoruiqin = User.objects.get(display_name="高睿沁")
+        client = APIClient()
+        client.force_authenticate(gaoruiqin)
+        response = client.get(reverse("my-logs"), {"team": qinglan_team.id})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([item["day"] for item in response.data], [1, 2, 3, 4, 5])
+        self.assertTrue(all(not item["is_complete"] for item in response.data))
 
     def test_existing_student_can_join_second_team_without_moving_logs(self):
         existing_teacher = User.objects.create_user(
@@ -108,12 +122,13 @@ class AddNewRosterCommandTests(TestCase):
         existing_log.refresh_from_db()
         self.assertEqual(existing_log.team, smart_run)
         self.assertEqual(existing_log.work_content, "原智跑日志内容")
-        self.assertFalse(
-            DailyLog.objects.filter(
-                team__name="TEAM「清澜环」",
-                student=xie,
-            ).exists()
+        new_team_logs = DailyLog.objects.filter(
+            team__name="TEAM「清澜环」",
+            student=xie,
         )
+        self.assertEqual(new_team_logs.count(), 5)
+        self.assertEqual(list(new_team_logs.values_list("day", flat=True)), [1, 2, 3, 4, 5])
+        self.assertTrue(all(not log.is_complete for log in new_team_logs))
 
     def test_existing_normalized_team_and_content_are_preserved(self):
         existing_teacher = User.objects.create_user(

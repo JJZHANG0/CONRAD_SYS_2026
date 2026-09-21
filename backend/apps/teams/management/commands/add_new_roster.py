@@ -6,6 +6,7 @@ from django.db import transaction
 
 from apps.teams.models import Team, TeamMember
 from apps.teams.services import (
+    create_daily_logs_for_member,
     create_innovation_brief,
     create_lean_canvas,
 )
@@ -258,6 +259,9 @@ class Command(BaseCommand):
                     f"{student.display_name} already has role "
                     f"{membership.student_role}, expected {item['student_role']}"
                 )
+            # Blank rows are the five editable form slots, not submitted log
+            # content. get_or_create preserves every existing student entry.
+            create_daily_logs_for_member(team, student)
             members_created += int(member_created)
             self.stdout.write(
                 f"{'Created' if created else 'Kept'} student: "
