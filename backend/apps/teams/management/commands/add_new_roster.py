@@ -28,8 +28,8 @@ STAFF = (
         "role": User.Role.TEACHER,
     },
     {
-        "username": "teacher_haozhenyu",
-        "display_name": "郝震煜",
+        "username": "teacher_haozhenkun",
+        "display_name": "郝震焜",
         "role": User.Role.TEACHER,
     },
     {
@@ -60,7 +60,7 @@ TEAMS = (
         "name": "TEAM「隼卫」",
         "project_name": "隼卫",
         "challenge_category": "Aerospace & Aviation",
-        "teacher": "郝震煜",
+        "teacher": "郝震焜",
         "operations": "许瑾",
         "description": "",
     },

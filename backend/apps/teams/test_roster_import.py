@@ -58,6 +58,8 @@ class AddNewRosterCommandTests(TestCase):
         self.assertEqual(qinglan_team.members.count(), 4)
         self.assertEqual(qinglan_team.teacher.display_name, "杜步天")
         self.assertEqual(qinglan_team.challenge_category, "Energy & Environment")
+        self.assertEqual(falcon_team.teacher.display_name, "郝震焜")
+        self.assertEqual(falcon_team.teacher.username, "teacher_haozhenkun")
         self.assertTrue(qinglan_team.co_teachers.filter(pk=self.xu.pk).exists())
         self.assertEqual(blue_team.description, "花名册暂无已缴费学生")
         self.assertEqual(cold_team.teacher.display_name, "王志衡")
