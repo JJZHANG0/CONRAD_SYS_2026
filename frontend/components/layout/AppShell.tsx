@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { LayoutDashboard, LogOut, Radar } from "lucide-react";
+import { LayoutDashboard, LogOut } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { isAuthenticated, clearTokens } from "@/lib/auth";
 import { Button, LoadingState } from "@/components/ui";
@@ -16,13 +17,16 @@ export function TopNav() {
   return (
     <header className="sticky top-0 z-40 border-b border-white/70 bg-[#f7fbfc]/72 shadow-[0_8px_28px_rgba(17,49,62,0.06)] backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-        <Link href="/dashboard" className="flex min-w-0 items-center gap-3 text-text-primary">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary/25 bg-primary text-white shadow-sm">
-            <Radar size={19} strokeWidth={1.8} />
-          </span>
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold">Conrad Command</span>
-            <span className="block truncate text-[10px] font-medium text-text-secondary">STEMHUB OPERATIONS</span>
+        <Link href="/dashboard" className="flex min-w-0 items-center" aria-label="Conrad Challenge 工作台">
+          <span className="relative block h-[38px] w-[148px] shrink-0 overflow-hidden sm:h-11 sm:w-[178px]">
+            <Image
+              src="/conrad-challenge-logo.png"
+              alt="Conrad Challenge"
+              fill
+              priority
+              sizes="(max-width: 640px) 148px, 178px"
+              className="object-cover object-center mix-blend-multiply"
+            />
           </span>
         </Link>
         <div className="flex items-center gap-2 sm:gap-3">

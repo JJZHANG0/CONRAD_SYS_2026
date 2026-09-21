@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { Card, Button } from "@/components/ui";
 import { getErrorMessage } from "@/lib/apiClient";
-import { ArrowRight, LockKeyhole, Radar, UserRound } from "lucide-react";
+import { ArrowRight, LockKeyhole, UserRound } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,14 +29,19 @@ export default function LoginPage() {
   return (
     <div className="app-surface flex min-h-screen items-center justify-center p-4 sm:p-8">
       <div className="w-full max-w-[430px]">
-        <div className="mb-7 flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-lg border border-primary/25 bg-primary text-white shadow-lg shadow-cyan-950/10">
-            <Radar size={24} strokeWidth={1.7} />
-          </span>
-          <div>
-            <p className="eyebrow">STEMHUB · CONRAD CHALLENGE</p>
-            <h1 className="mt-1 text-xl font-semibold text-text-primary">项目运营指挥中心</h1>
+        <div className="mb-7">
+          <div className="relative h-[68px] w-[258px] overflow-hidden">
+            <Image
+              src="/conrad-challenge-logo.png"
+              alt="Conrad Challenge"
+              fill
+              priority
+              sizes="258px"
+              className="object-cover object-center mix-blend-multiply"
+            />
           </div>
+          <p className="mt-3 text-xs font-semibold text-primary">STEMHUB OPERATIONS</p>
+          <h1 className="mt-1 text-xl font-semibold text-text-primary">项目运营指挥中心</h1>
         </div>
         <Card className="glass-strong !p-6 sm:!p-7">
           <div className="mb-6">
