@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FileText, Grid3X3, UserRound } from "lucide-react";
 import { Card, Button, ProgressBar, StatCard } from "@/components/ui";
 import { TeamLogsExportButton } from "@/components/team/TeamLogsExportButton";
+import { getChallengeThemeStyle } from "@/utils/challengeTheme";
 import type { TeamDetail } from "@/types/team";
 
 export function TeamHeader({
@@ -15,10 +16,10 @@ export function TeamHeader({
 }) {
   const s = team.stats;
   return (
-    <Card className="mb-6 glass-strong">
+    <Card className="team-category-card mb-6 glass-strong" style={getChallengeThemeStyle(team.challenge_category)}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <span className="rounded-md border border-primary/15 bg-primary-light px-2 py-1 text-[11px] font-semibold text-primary">{team.challenge_category}</span>
+          <span className="team-category-badge rounded-md border px-2 py-1 text-[11px] font-semibold">{team.challenge_category}</span>
           <h1 className="mt-3 text-2xl font-semibold">{team.name}</h1>
           <p className="text-text-secondary">{team.project_name}</p>
           <p className="mt-1 text-sm">

@@ -18,14 +18,14 @@ export function TopNav() {
     <header className="sticky top-0 z-40 border-b border-white/70 bg-[#f7fbfc]/72 shadow-[0_8px_28px_rgba(17,49,62,0.06)] backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         <Link href="/dashboard" className="flex min-w-0 items-center" aria-label="Conrad Challenge 工作台">
-          <span className="relative block h-[38px] w-[148px] shrink-0 overflow-hidden sm:h-11 sm:w-[178px]">
+          <span className="relative block h-[46px] w-[138px] shrink-0 sm:h-[54px] sm:w-[174px]">
             <Image
-              src="/conrad-challenge-logo.png"
+              src="/conrad-challenge-logo-transparent.png"
               alt="Conrad Challenge"
               fill
               priority
-              sizes="(max-width: 640px) 148px, 178px"
-              className="object-cover object-center mix-blend-multiply"
+              sizes="(max-width: 640px) 138px, 174px"
+              className="object-contain object-left"
             />
           </span>
         </Link>

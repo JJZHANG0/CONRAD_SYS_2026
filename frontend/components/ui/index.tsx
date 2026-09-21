@@ -1,9 +1,10 @@
 import clsx from "clsx";
 export { TextArea } from "./RichTextEditor";
 
-export function Card({ children, className, hover, borderTop }: {
+export function Card({ children, className, hover, borderTop, style }: {
   children: React.ReactNode; className?: string; hover?: boolean;
   borderTop?: "blue" | "purple" | "yellow";
+  style?: React.CSSProperties;
 }) {
   return (
     <div className={clsx(
@@ -13,7 +14,7 @@ export function Card({ children, className, hover, borderTop }: {
       borderTop === "purple" && "border-top-purple",
       borderTop === "yellow" && "border-top-yellow",
       className
-    )}>{children}</div>
+    )} style={style}>{children}</div>
   );
 }
 
@@ -50,13 +51,13 @@ export function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export function ProgressBar({ value, max, label }: { value: number; max: number; label?: string }) {
+export function ProgressBar({ value, max, label, color }: { value: number; max: number; label?: string; color?: string }) {
   const pct = max ? Math.round((value / max) * 100) : 0;
   return (
     <div>
       {label && <div className="mb-1 flex justify-between text-xs text-text-secondary"><span>{label}</span><span>{value}/{max}</span></div>}
       <div className="h-1.5 overflow-hidden rounded-full bg-[#dfe9ed]">
-        <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${pct}%` }} />
+        <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
       </div>
     </div>
   );

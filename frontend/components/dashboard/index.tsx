@@ -13,6 +13,7 @@ import {
 import { Card, Button, StatusBadge, ProgressBar, EmptyState } from "@/components/ui";
 import { OperationsManagementPanel } from "@/components/operations/OperationsManagementPanel";
 import { BulkDocumentExport } from "@/components/operations/BulkDocumentExport";
+import { getChallengeTheme, getChallengeThemeStyle } from "@/utils/challengeTheme";
 import type { DailyLog } from "@/types/log";
 import type { StudentDashboard, TeacherDashboard, OperationsDashboard, TeamStats, TeamSummary } from "@/types/team";
 
@@ -54,47 +55,51 @@ export function StudentDashboardView({ data }: { data: StudentDashboard }) {
         <p className="mt-1 text-text-secondary">Team Progress, Daily Reflection, Innovation Brief & Lean Canvas</p>
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
-        {data.teams.map((team) => (
-          <Card key={team.id} className="mb-0">
+        {data.teams.map((team) => {
+          const theme = getChallengeTheme(team.challenge_category);
+          return (
+          <Card key={team.id} className="team-category-card mb-0" style={getChallengeThemeStyle(team.challenge_category)}>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <p className="text-sm text-text-secondary">My Team</p>
+                <p className="text-sm font-medium" style={{ color: theme.deep }}>My Team</p>
                 <h2 className="text-xl font-semibold">{team.name}</h2>
                 <p className="text-sm text-text-secondary">{team.project_name} · {team.challenge_category}</p>
                 <p className="mt-1 text-sm">Teacher: <span className="font-medium text-primary">{team.teacher_name}</span></p>
               </div>
               <div className="flex flex-wrap gap-3">
-                <Link href={`/my-logs?team=${team.id}`}><Button>Write Today&apos;s Log</Button></Link>
+                <Link href={`/my-logs?team=${team.id}`}><Button style={{ backgroundColor: theme.accent, borderColor: theme.accent }}>Write Today&apos;s Log</Button></Link>
                 <Link href={`/teams/${team.id}/innovation-brief`}><Button variant="secondary">Innovation Brief</Button></Link>
                 <Link href={`/teams/${team.id}/lean-canvas`}><Button variant="secondary">Lean Canvas</Button></Link>
               </div>
             </div>
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              <ProgressBar value={team.my_log_completion} max={team.total_log_count} label="Log Completion" />
+              <ProgressBar value={team.my_log_completion} max={team.total_log_count} label="Log Completion" color={theme.accent} />
               <p className="text-sm text-text-secondary">Teacher comments: <strong>{team.teacher_comment_count}</strong></p>
-              <p className="text-sm text-text-secondary">Suggested day: <strong className="text-primary">Day {team.next_incomplete_day}</strong></p>
+              <p className="text-sm text-text-secondary">Suggested day: <strong style={{ color: theme.deep }}>Day {team.next_incomplete_day}</strong></p>
             </div>
-            <Link href={`/my-logs?team=${team.id}`} className="mt-4 inline-block text-sm text-primary hover:underline">View all logs →</Link>
+            <Link href={`/my-logs?team=${team.id}`} className="mt-4 inline-block text-sm hover:underline" style={{ color: theme.deep }}>View all logs →</Link>
           </Card>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 }
 
 export function TeamCard({ team }: { team: TeamSummary & TeamStats }) {
+  const theme = getChallengeTheme(team.challenge_category);
   return (
     <Link href={`/teams/${team.id}`} className="group block h-full">
-      <Card hover className="flex h-full flex-col !p-5">
+      <Card hover className="team-category-card flex h-full flex-col !p-5" style={getChallengeThemeStyle(team.challenge_category)}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <span className="inline-flex max-w-full rounded-md border border-primary/15 bg-primary-light/70 px-2 py-1 text-[10px] font-semibold text-primary">
+            <span className="team-category-badge inline-flex max-w-full rounded-md border px-2 py-1 text-[10px] font-semibold">
               <span className="truncate">{team.challenge_category || "Uncategorized"}</span>
             </span>
             <h3 className="mt-3 truncate text-lg font-semibold text-text-primary">{team.name}</h3>
             <p className="mt-0.5 truncate text-sm text-text-secondary">{team.project_name}</p>
           </div>
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-white/70 text-text-secondary transition-colors group-hover:border-primary/30 group-hover:text-primary">
+          <span className="team-category-action flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border bg-white/70 transition-colors">
             <ArrowUpRight size={16} />
           </span>
         </div>
@@ -102,13 +107,13 @@ export function TeamCard({ team }: { team: TeamSummary & TeamStats }) {
           <p className="mt-3 truncate text-xs text-text-secondary">导师 · {team.teacher_name}</p>
         )}
         <div className="mt-5 grid grid-cols-3 gap-2 border-y border-border/70 py-3">
-          <div><strong className="block text-sm tabular-nums">{team.member_count}/5</strong><span className="text-[10px] text-text-secondary">成员</span></div>
-          <div><strong className="block text-sm tabular-nums">{team.bmc_completion_count ?? 0}/{team.bmc_total || 12}</strong><span className="text-[10px] text-text-secondary">BMC</span></div>
-          <div><strong className="block text-sm tabular-nums">{team.innovation_brief_completion_count ?? 0}/{team.innovation_brief_total || 10}</strong><span className="text-[10px] text-text-secondary">IB</span></div>
+          <div><strong className="team-category-value block text-sm tabular-nums">{team.member_count}/5</strong><span className="text-[10px] text-text-secondary">成员</span></div>
+          <div><strong className="team-category-value block text-sm tabular-nums">{team.bmc_completion_count ?? 0}/{team.bmc_total || 12}</strong><span className="text-[10px] text-text-secondary">BMC</span></div>
+          <div><strong className="team-category-value block text-sm tabular-nums">{team.innovation_brief_completion_count ?? 0}/{team.innovation_brief_total || 10}</strong><span className="text-[10px] text-text-secondary">IB</span></div>
         </div>
         <div className="mt-4 space-y-2.5">
-          <ProgressBar value={team.member_count} max={5} label="Members" />
-          <ProgressBar value={team.log_completion_count} max={team.total_log_count || 1} label="Student Logs" />
+          <ProgressBar value={team.member_count} max={5} label="Members" color={theme.accent} />
+          <ProgressBar value={team.log_completion_count} max={team.total_log_count || 1} label="Student Logs" color={theme.accent} />
         </div>
       </Card>
     </Link>

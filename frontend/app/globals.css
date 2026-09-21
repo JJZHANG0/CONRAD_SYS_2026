@@ -30,6 +30,49 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
+.team-category-card {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--category-border);
+  background:
+    linear-gradient(145deg, var(--category-soft), rgba(255, 255, 255, 0.8) 44%, rgba(249, 252, 253, 0.7));
+}
+
+.team-category-card::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  content: "";
+  background: var(--category-accent);
+}
+
+.team-category-card.card-hover:hover {
+  border-color: var(--category-border);
+  box-shadow:
+    0 22px 52px rgb(var(--category-rgb) / 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+.team-category-badge {
+  border-color: var(--category-border);
+  color: var(--category-deep);
+  background: var(--category-soft);
+}
+
+.team-category-action {
+  border-color: var(--category-border);
+  color: var(--category-deep);
+}
+
+.team-category-card:hover .team-category-action {
+  color: #fff;
+  background: var(--category-accent);
+}
+
+.team-category-value {
+  color: var(--category-deep);
+}
+
 .input-field {
   @apply w-full rounded-lg border border-border bg-white/70 px-4 py-3 text-sm text-text-primary placeholder:text-text-secondary/60 transition-all;
   box-shadow: inset 0 1px 2px rgba(16, 35, 46, 0.035);

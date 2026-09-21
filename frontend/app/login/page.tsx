@@ -30,14 +30,14 @@ export default function LoginPage() {
     <div className="app-surface flex min-h-screen items-center justify-center p-4 sm:p-8">
       <div className="w-full max-w-[430px]">
         <div className="mb-7">
-          <div className="relative h-[68px] w-[258px] overflow-hidden">
+          <div className="relative h-[86px] w-[258px]">
             <Image
-              src="/conrad-challenge-logo.png"
+              src="/conrad-challenge-logo-transparent.png"
               alt="Conrad Challenge"
               fill
               priority
               sizes="258px"
-              className="object-cover object-center mix-blend-multiply"
+              className="object-contain object-left"
             />
           </div>
           <p className="mt-3 text-xs font-semibold text-primary">STEMHUB OPERATIONS</p>
