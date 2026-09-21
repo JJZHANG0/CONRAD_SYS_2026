@@ -37,9 +37,11 @@ export function TopNav() {
             <LayoutDashboard size={15} /> 工作台
           </Link>
           {user && (
-            <div className="hidden border-l border-border/80 pl-3 text-right sm:block">
-              <span className="block text-xs font-semibold text-text-primary">{user.display_name}</span>
-              <span className="block text-[10px] text-text-secondary">{roleLabel}</span>
+            <div className="hidden h-8 items-center gap-2 border-l border-border/80 pl-3 sm:flex">
+              <span className="text-xs font-semibold leading-none text-text-primary">{user.display_name}</span>
+              <span className="rounded-md border border-primary/15 bg-primary-light/70 px-1.5 py-1 text-[10px] font-medium leading-none text-primary">
+                {roleLabel}
+              </span>
             </div>
           )}
           <Button
