@@ -5,16 +5,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: { DEFAULT: "#2563EB", light: "#EFF6FF" },
-        accent: { purple: "#7C3AED", yellow: "#FACC15" },
-        surface: { DEFAULT: "#FFFFFF", muted: "#F8FAFC" },
-        border: { DEFAULT: "#E5E7EB" },
-        text: { primary: "#111827", secondary: "#6B7280" },
+        primary: { DEFAULT: "#087F9C", light: "#E5F6F8" },
+        accent: { purple: "#6957A5", yellow: "#D79A2B" },
+        surface: { DEFAULT: "#F9FCFD", muted: "#EDF3F5" },
+        border: { DEFAULT: "#CFDCE2" },
+        text: { primary: "#10232E", secondary: "#607581" },
       },
       boxShadow: {
-        card: "0 12px 30px rgba(15, 23, 42, 0.06)",
+        card: "0 18px 46px rgba(17, 49, 62, 0.09)",
       },
-      borderRadius: { xl: "20px", "2xl": "24px" },
+      borderRadius: { xl: "8px", "2xl": "10px" },
     },
   },
   plugins: [],

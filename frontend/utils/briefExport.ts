@@ -368,7 +368,7 @@ function mountPdfFrame(html: string): { root: HTMLElement; cleanup: () => void }
   };
 }
 
-async function canvasToPdf(canvas: HTMLCanvasElement, filename: string): Promise<void> {
+async function canvasToPdfBlob(canvas: HTMLCanvasElement): Promise<Blob> {
   const { jsPDF } = await import("jspdf");
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
@@ -396,13 +396,12 @@ async function canvasToPdf(canvas: HTMLCanvasElement, filename: string): Promise
     heightLeft -= contentHeight;
   }
 
-  pdf.save(filename);
+  return pdf.output("blob");
 }
 
-export async function exportBriefPdf(brief: InnovationBrief, meta: BriefExportMeta): Promise<void> {
+export async function createBriefPdfBlob(brief: InnovationBrief, meta: BriefExportMeta): Promise<Blob> {
   const html = buildExportHtml(brief, meta, true);
   const { root, cleanup } = mountPdfFrame(html);
-  const filename = `${safeFilename(meta.teamName)}_Innovation_Brief.pdf`;
 
   try {
     await waitForLayout();
@@ -426,13 +425,18 @@ export async function exportBriefPdf(brief: InnovationBrief, meta: BriefExportMe
       throw new Error("PDF 画布生成失败");
     }
 
-    await canvasToPdf(canvas, filename);
+    return await canvasToPdfBlob(canvas);
   } finally {
     cleanup();
   }
 }
 
-export async function exportBriefDocx(brief: InnovationBrief, meta: BriefExportMeta): Promise<void> {
+export async function exportBriefPdf(brief: InnovationBrief, meta: BriefExportMeta): Promise<void> {
+  const blob = await createBriefPdfBlob(brief, meta);
+  saveAs(blob, `${safeFilename(meta.teamName)}_Innovation_Brief.pdf`);
+}
+
+export async function createBriefDocxBlob(brief: InnovationBrief, meta: BriefExportMeta): Promise<Blob> {
   const children: (Paragraph | Table)[] = [
     new Paragraph({
       alignment: AlignmentType.CENTER,
@@ -504,6 +508,10 @@ export async function exportBriefDocx(brief: InnovationBrief, meta: BriefExportM
     sections: [{ properties: {}, children }],
   });
 
-  const blob = await Packer.toBlob(doc);
+  return Packer.toBlob(doc);
+}
+
+export async function exportBriefDocx(brief: InnovationBrief, meta: BriefExportMeta): Promise<void> {
+  const blob = await createBriefDocxBlob(brief, meta);
   saveAs(blob, `${safeFilename(meta.teamName)}_Innovation_Brief.docx`);
 }

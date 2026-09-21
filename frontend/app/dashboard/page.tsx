@@ -12,7 +12,7 @@ import type { DashboardData, StudentDashboard } from "@/types/team";
 import type { DailyLog } from "@/types/log";
 
 export default function DashboardPage() {
-  return <AuthGuard><AppShell><DashboardContent /></AppShell></AuthGuard>;
+  return <AuthGuard><AppShell wide><DashboardContent /></AppShell></AuthGuard>;
 }
 
 function DashboardContent() {

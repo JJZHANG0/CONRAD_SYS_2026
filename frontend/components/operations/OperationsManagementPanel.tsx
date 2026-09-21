@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ChevronDown, Settings2 } from "lucide-react";
 import { Card, Button } from "@/components/ui";
 import { TeamPicker } from "@/components/operations/TeamPicker";
 import {
@@ -27,6 +28,7 @@ interface Props {
 }
 
 export function OperationsManagementPanel({ teams, onChanged }: Props) {
+  const [expanded, setExpanded] = useState(false);
   const [teachers, setTeachers] = useState<OpsTeacher[]>([]);
   const [activeTab, setActiveTab] = useState<"student" | "team" | "delete">("student");
   const [msg, setMsg] = useState("");
@@ -158,9 +160,24 @@ export function OperationsManagementPanel({ teams, onChanged }: Props) {
   ];
 
   return (
-    <Card className="mb-8 border-top-yellow !p-5">
-      <h2 className="mb-1 text-lg font-semibold text-text-primary">运营管理 · Operations Tools</h2>
-      <p className="mb-4 text-xs text-text-secondary">仅运营账号可用 · Log / Brief 为只读浏览</p>
+    <Card className="mb-5 !p-0">
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        className="flex w-full items-center justify-between gap-4 rounded-lg px-5 py-4 text-left transition-colors hover:bg-white/45"
+        aria-expanded={expanded}
+      >
+        <span className="flex items-center gap-3">
+          <span className="icon-tile icon-tile-amber"><Settings2 size={17} /></span>
+          <span>
+            <strong className="block text-sm font-semibold text-text-primary">运营管理工具</strong>
+            <span className="mt-0.5 block text-xs text-text-secondary">新增学生、创建或删除队伍</span>
+          </span>
+        </span>
+        <ChevronDown size={17} className={`shrink-0 text-text-secondary transition-transform ${expanded ? "rotate-180" : ""}`} />
+      </button>
+
+      {expanded && <div className="border-t border-border/70 px-5 pb-5 pt-4">
 
       <div className="mb-4 flex flex-wrap gap-2">
         {tabs.map((t) => (
@@ -320,6 +337,7 @@ export function OperationsManagementPanel({ teams, onChanged }: Props) {
           </div>
         </div>
       )}
+      </div>}
     </Card>
   );
 }

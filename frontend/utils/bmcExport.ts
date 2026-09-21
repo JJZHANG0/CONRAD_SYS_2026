@@ -370,7 +370,7 @@ function mountPdfFrame(html: string): { root: HTMLElement; cleanup: () => void }
   };
 }
 
-async function canvasToPdf(canvasEl: HTMLCanvasElement, filename: string): Promise<void> {
+async function canvasToPdfBlob(canvasEl: HTMLCanvasElement): Promise<Blob> {
   const { jsPDF } = await import("jspdf");
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
@@ -397,13 +397,12 @@ async function canvasToPdf(canvasEl: HTMLCanvasElement, filename: string): Promi
     heightLeft -= contentHeight;
   }
 
-  pdf.save(filename);
+  return pdf.output("blob");
 }
 
-export async function exportBmcPdf(canvas: LeanCanvas, meta: BmcExportMeta): Promise<void> {
+export async function createBmcPdfBlob(canvas: LeanCanvas, meta: BmcExportMeta): Promise<Blob> {
   const html = buildExportHtml(canvas, meta, true);
   const { root, cleanup } = mountPdfFrame(html);
-  const filename = `${safeFilename(meta.teamName)}_Lean_Canvas_BMC.pdf`;
 
   try {
     await waitForLayout();
@@ -427,13 +426,18 @@ export async function exportBmcPdf(canvas: LeanCanvas, meta: BmcExportMeta): Pro
       throw new Error("PDF 画布生成失败");
     }
 
-    await canvasToPdf(rendered, filename);
+    return await canvasToPdfBlob(rendered);
   } finally {
     cleanup();
   }
 }
 
-export async function exportBmcDocx(canvas: LeanCanvas, meta: BmcExportMeta): Promise<void> {
+export async function exportBmcPdf(canvas: LeanCanvas, meta: BmcExportMeta): Promise<void> {
+  const blob = await createBmcPdfBlob(canvas, meta);
+  saveAs(blob, `${safeFilename(meta.teamName)}_Lean_Canvas_BMC.pdf`);
+}
+
+export async function createBmcDocxBlob(canvas: LeanCanvas, meta: BmcExportMeta): Promise<Blob> {
   const children: (Paragraph | Table)[] = [
     new Paragraph({
       alignment: AlignmentType.CENTER,
@@ -505,6 +509,10 @@ export async function exportBmcDocx(canvas: LeanCanvas, meta: BmcExportMeta): Pr
     sections: [{ properties: {}, children }],
   });
 
-  const blob = await Packer.toBlob(doc);
+  return Packer.toBlob(doc);
+}
+
+export async function exportBmcDocx(canvas: LeanCanvas, meta: BmcExportMeta): Promise<void> {
+  const blob = await createBmcDocxBlob(canvas, meta);
   saveAs(blob, `${safeFilename(meta.teamName)}_Lean_Canvas_BMC.docx`);
 }

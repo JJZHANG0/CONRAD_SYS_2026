@@ -7,7 +7,7 @@ export function Card({ children, className, hover, borderTop }: {
 }) {
   return (
     <div className={clsx(
-      "rounded-2xl border border-border bg-white p-6 card-shadow",
+      "glass-panel rounded-xl p-5 card-shadow sm:p-6",
       hover && "card-hover cursor-pointer",
       borderTop === "blue" && "border-top-blue",
       borderTop === "purple" && "border-top-purple",
@@ -21,13 +21,13 @@ export function Button({ variant = "primary", size = "md", className, children, 
   variant?: "primary" | "secondary" | "ghost"; size?: "sm" | "md";
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const v = {
-    primary: "bg-primary text-white hover:bg-blue-700 shadow-sm",
-    secondary: "bg-white text-text-primary border border-border hover:bg-gray-50",
-    ghost: "bg-transparent text-text-secondary hover:bg-gray-100",
+    primary: "border border-primary bg-primary text-white shadow-sm hover:border-[#096c84] hover:bg-[#096c84]",
+    secondary: "border border-border bg-white/72 text-text-primary hover:border-primary/35 hover:bg-white",
+    ghost: "border border-transparent bg-transparent text-text-secondary hover:border-border/80 hover:bg-white/55 hover:text-text-primary",
   };
-  const s = { sm: "px-3 py-1.5 text-xs", md: "px-5 py-2.5 text-sm" };
+  const s = { sm: "min-h-8 px-3 py-1.5 text-xs", md: "min-h-10 px-4 py-2.5 text-sm" };
   return (
-    <button className={clsx("inline-flex items-center justify-center rounded-xl font-medium transition-all", v[variant], s[size], className)} {...props}>
+    <button className={clsx("inline-flex items-center justify-center rounded-lg font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-55", v[variant], s[size], className)} {...props}>
       {children}
     </button>
   );
@@ -44,7 +44,7 @@ export function StatusBadge({ status }: { status: string }) {
     complete: "Completed", incomplete: "In Progress", commented: "Commented", pending: "Pending",
   };
   return (
-    <span className={clsx("inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium", map[status] || map.pending)}>
+    <span className={clsx("inline-flex rounded-md border px-2 py-0.5 text-[11px] font-medium", map[status] || map.pending)}>
       {label[status] || status}
     </span>
   );
@@ -55,18 +55,22 @@ export function ProgressBar({ value, max, label }: { value: number; max: number;
   return (
     <div>
       {label && <div className="mb-1 flex justify-between text-xs text-text-secondary"><span>{label}</span><span>{value}/{max}</span></div>}
-      <div className="h-2 overflow-hidden rounded-full bg-gray-100">
-        <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+      <div className="h-1.5 overflow-hidden rounded-full bg-[#dfe9ed]">
+        <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
 }
 
 export function StatCard({ label, value, accent }: { label: string; value: string | number; accent?: "blue" | "purple" | "yellow" }) {
-  const bg = { blue: "bg-primary-light", purple: "bg-purple-50", yellow: "bg-yellow-50" };
+  const bg = {
+    blue: "border-cyan-200/70 bg-cyan-50/55",
+    purple: "border-violet-200/70 bg-violet-50/45",
+    yellow: "border-amber-200/70 bg-amber-50/55",
+  };
   return (
-    <div className={clsx("rounded-2xl border border-border p-4", accent && bg[accent])}>
-      <p className="text-2xl font-bold text-text-primary">{value}</p>
+    <div className={clsx("rounded-lg border border-border bg-white/55 p-4", accent && bg[accent])}>
+      <p className="text-xl font-semibold tabular-nums text-text-primary">{value}</p>
       <p className="mt-1 text-xs text-text-secondary">{label}</p>
     </div>
   );
@@ -82,7 +86,7 @@ export function SaveIndicator({ status }: { status: "idle" | "saving" | "saved" 
 export function LoadingState({ message = "Loading..." }: { message?: string }) {
   return (
     <div className="flex flex-col items-center py-20">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/25 border-t-primary" />
       <p className="mt-3 text-sm text-text-secondary">{message}</p>
     </div>
   );

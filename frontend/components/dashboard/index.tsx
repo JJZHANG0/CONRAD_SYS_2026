@@ -1,10 +1,20 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Card, Button, StatusBadge, ProgressBar } from "@/components/ui";
+import {
+  ArrowUpRight,
+  BriefcaseBusiness,
+  CircleGauge,
+  Search,
+  Users,
+  X,
+} from "lucide-react";
+import { Card, Button, StatusBadge, ProgressBar, EmptyState } from "@/components/ui";
 import { OperationsManagementPanel } from "@/components/operations/OperationsManagementPanel";
+import { BulkDocumentExport } from "@/components/operations/BulkDocumentExport";
 import type { DailyLog } from "@/types/log";
-import type { StudentDashboard, TeacherDashboard, OperationsDashboard } from "@/types/team";
+import type { StudentDashboard, TeacherDashboard, OperationsDashboard, TeamStats, TeamSummary } from "@/types/team";
 
 interface OperationsDashboardProps {
   data: OperationsDashboard;
@@ -72,63 +82,120 @@ export function StudentDashboardView({ data }: { data: StudentDashboard }) {
   );
 }
 
-export function TeamCard({ team }: { team: TeacherDashboard["teams"][0] }) {
+export function TeamCard({ team }: { team: TeamSummary & TeamStats }) {
   return (
-    <Link href={`/teams/${team.id}`} className="block">
-      <Card hover borderTop="purple">
-        <div className="mb-1 inline-block rounded-full bg-purple-50 px-2 py-0.5 text-xs text-accent-purple">{team.challenge_category}</div>
-        <h3 className="text-lg font-semibold text-text-primary">{team.name}</h3>
-        <p className="text-sm text-text-secondary">{team.project_name}</p>
-        <div className="mt-4 space-y-2">
+    <Link href={`/teams/${team.id}`} className="group block h-full">
+      <Card hover className="flex h-full flex-col !p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <span className="inline-flex max-w-full rounded-md border border-primary/15 bg-primary-light/70 px-2 py-1 text-[10px] font-semibold text-primary">
+              <span className="truncate">{team.challenge_category || "Uncategorized"}</span>
+            </span>
+            <h3 className="mt-3 truncate text-lg font-semibold text-text-primary">{team.name}</h3>
+            <p className="mt-0.5 truncate text-sm text-text-secondary">{team.project_name}</p>
+          </div>
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-white/70 text-text-secondary transition-colors group-hover:border-primary/30 group-hover:text-primary">
+            <ArrowUpRight size={16} />
+          </span>
+        </div>
+        {team.teacher_name && (
+          <p className="mt-3 truncate text-xs text-text-secondary">导师 · {team.teacher_name}</p>
+        )}
+        <div className="mt-5 grid grid-cols-3 gap-2 border-y border-border/70 py-3">
+          <div><strong className="block text-sm tabular-nums">{team.member_count}/5</strong><span className="text-[10px] text-text-secondary">成员</span></div>
+          <div><strong className="block text-sm tabular-nums">{team.bmc_completion_count ?? 0}/{team.bmc_total || 12}</strong><span className="text-[10px] text-text-secondary">BMC</span></div>
+          <div><strong className="block text-sm tabular-nums">{team.innovation_brief_completion_count ?? 0}/{team.innovation_brief_total || 10}</strong><span className="text-[10px] text-text-secondary">IB</span></div>
+        </div>
+        <div className="mt-4 space-y-2.5">
           <ProgressBar value={team.member_count} max={5} label="Members" />
           <ProgressBar value={team.log_completion_count} max={team.total_log_count || 1} label="Student Logs" />
-          <ProgressBar value={team.teacher_comment_count} max={team.total_log_count || 1} label="Teacher Comments" />
-          <ProgressBar value={team.innovation_brief_completion_count ?? 0} max={team.innovation_brief_total || 10} label="Innovation Brief" />
-          <ProgressBar value={team.bmc_completion_count ?? 0} max={team.bmc_total || 12} label="Lean Canvas" />
-          <ProgressBar value={team.teacher_score_total ?? 0} max={team.teacher_score_max ?? 50} label="Teacher Score" />
         </div>
-        <span className="mt-4 block w-full rounded-xl border border-border bg-white py-2 text-center text-sm font-medium text-text-primary">
-          Enter Team →
-        </span>
       </Card>
     </Link>
   );
 }
 
 export function OperationsDashboardView({ data, onRefresh }: OperationsDashboardProps) {
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const filteredTeams = useMemo(() => {
+    if (!normalizedQuery) return data.teams;
+    return data.teams.filter((team) =>
+      [team.name, team.project_name, team.challenge_category, team.teacher_name]
+        .filter(Boolean)
+        .some((value) => String(value).toLocaleLowerCase().includes(normalizedQuery)),
+    );
+  }, [data.teams, normalizedQuery]);
+  const totalMembers = data.teams.reduce((sum, team) => sum + team.member_count, 0);
+
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">Operations Dashboard</h1>
-        <p className="mt-1 text-text-secondary">All teams · {data.teams.length} total · 只读浏览 Log / Brief / BMC</p>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="eyebrow">OPERATIONS COMMAND CENTER</p>
+          <h1 className="mt-2 text-2xl font-semibold text-text-primary">队伍运营工作台</h1>
+          <p className="mt-1 text-sm text-text-secondary">集中检索、追踪和导出全部项目资料</p>
+        </div>
+        <div className="flex gap-2">
+          <span className="glass-panel flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-text-secondary"><BriefcaseBusiness size={14} className="text-primary" /> {data.teams.length} 支队伍</span>
+          <span className="glass-panel flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-text-secondary"><Users size={14} className="text-emerald-600" /> {totalMembers} 名成员</span>
+        </div>
+      </div>
+
+      <div className="mb-5 grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(330px,0.65fr)]">
+        <Card className="h-full !p-5">
+          <div className="flex items-start gap-3">
+            <span className="icon-tile" aria-hidden="true"><CircleGauge size={18} /></span>
+            <div>
+              <h2 className="font-semibold text-text-primary">快速定位队伍</h2>
+              <p className="mt-1 text-xs text-text-secondary">按队伍、项目、赛道或导师搜索</p>
+            </div>
+          </div>
+          <div className="relative mt-4">
+            <Search size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary" />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="input-field !h-12 !pl-11 !pr-11"
+              placeholder="输入队伍名、项目名、赛道或导师…"
+              aria-label="搜索队伍"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-text-secondary hover:bg-surface-muted hover:text-text-primary"
+                title="清除搜索"
+                aria-label="清除搜索"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+          <p className="mt-3 text-xs text-text-secondary">
+            显示 <strong className="font-semibold text-text-primary">{filteredTeams.length}</strong> / {data.teams.length} 支队伍
+          </p>
+        </Card>
+        <BulkDocumentExport teams={data.teams} />
       </div>
 
       {onRefresh && <OperationsManagementPanel teams={data.teams} onChanged={onRefresh} />}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {data.teams.map((t) => (
-          <Link key={t.id} href={`/teams/${t.id}`} className="block">
-            <Card hover borderTop="purple">
-              <div className="mb-1 inline-block rounded-full bg-purple-50 px-2 py-0.5 text-xs text-accent-purple">{t.challenge_category}</div>
-              <h3 className="text-lg font-semibold text-text-primary">{t.name}</h3>
-              <p className="text-sm text-text-secondary">{t.project_name}</p>
-              {t.teacher_name && (
-                <p className="mt-1 text-xs text-text-secondary">Teacher: {t.teacher_name}</p>
-              )}
-              <div className="mt-4 space-y-2">
-                <ProgressBar value={t.member_count} max={5} label="Members" />
-                <ProgressBar value={t.log_completion_count} max={t.total_log_count || 1} label="Student Logs" />
-                <ProgressBar value={t.teacher_comment_count} max={t.total_log_count || 1} label="Teacher Comments" />
-                <ProgressBar value={t.innovation_brief_completion_count ?? 0} max={t.innovation_brief_total || 10} label="Innovation Brief" />
-                <ProgressBar value={t.bmc_completion_count ?? 0} max={t.bmc_total || 12} label="Lean Canvas" />
-                <ProgressBar value={t.teacher_score_total ?? 0} max={t.teacher_score_max ?? 50} label="Teacher Score" />
-              </div>
-              <span className="mt-4 block w-full rounded-xl border border-border bg-white py-2 text-center text-sm font-medium text-text-primary">
-                Enter Team →
-              </span>
-            </Card>
-          </Link>
-        ))}
+
+      <div className="mb-4 mt-7 flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-base font-semibold text-text-primary">队伍列表</h2>
+          <p className="mt-0.5 text-xs text-text-secondary">点击卡片进入队伍详情</p>
+        </div>
+        {normalizedQuery && <span className="rounded-md border border-primary/15 bg-primary-light/70 px-2.5 py-1 text-xs font-medium text-primary">搜索结果 {filteredTeams.length}</span>}
       </div>
+      {filteredTeams.length ? (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {filteredTeams.map((team) => <TeamCard key={team.id} team={team} />)}
+        </div>
+      ) : (
+        <Card><EmptyState title="没有找到匹配的队伍" description="尝试输入项目名称、赛道或导师姓名" /></Card>
+      )}
     </div>
   );
 }
@@ -140,7 +207,7 @@ export function TeacherDashboardView({ data }: { data: TeacherDashboard }) {
         <h1 className="text-2xl font-bold text-text-primary">Teacher Dashboard</h1>
         <p className="mt-1 text-text-secondary">{data.teams.length} team(s) assigned</p>
       </div>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {data.teams.map((t) => <TeamCard key={t.id} team={t} />)}
       </div>
     </div>

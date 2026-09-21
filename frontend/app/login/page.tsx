@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { Card, Button } from "@/components/ui";
 import { getErrorMessage } from "@/lib/apiClient";
+import { ArrowRight, LockKeyhole, Radar, UserRound } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,45 +26,47 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-white p-4">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-light text-2xl">📋</div>
-          <h1 className="text-xl font-bold leading-snug text-text-primary sm:text-2xl">
-            STEMHUB CONRAD CHALLENGE SYS.
-          </h1>
-          <p className="mt-2 text-sm text-text-secondary">Team Progress, Daily Reflection, Innovation Brief</p>
-          <p className="mt-1 text-xs text-text-secondary">康莱德队伍学习日志与创新简报</p>
+    <div className="app-surface flex min-h-screen items-center justify-center p-4 sm:p-8">
+      <div className="w-full max-w-[430px]">
+        <div className="mb-7 flex items-center gap-3">
+          <span className="flex h-12 w-12 items-center justify-center rounded-lg border border-primary/25 bg-primary text-white shadow-lg shadow-cyan-950/10">
+            <Radar size={24} strokeWidth={1.7} />
+          </span>
+          <div>
+            <p className="eyebrow">STEMHUB · CONRAD CHALLENGE</p>
+            <h1 className="mt-1 text-xl font-semibold text-text-primary">项目运营指挥中心</h1>
+          </div>
         </div>
-        <Card>
+        <Card className="glass-strong !p-6 sm:!p-7">
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-text-primary">登录系统</h2>
+            <p className="mt-1 text-sm text-text-secondary">队伍进度、学习日志与创新材料管理</p>
+          </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium">姓名 / Name</label>
-              <input
-                className="input-field"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="请输入中文姓名"
-                autoComplete="username"
-                required
-              />
+              <label className="mb-1.5 block text-xs font-semibold text-text-secondary">姓名 / Name</label>
+              <div className="relative">
+                <UserRound size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary" />
+                <input className="input-field !pl-10" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="请输入中文姓名或账号" autoComplete="username" required />
+              </div>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">密码 / Password</label>
-              <input
-                type="password"
-                className="input-field"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="请输入密码"
-                autoComplete="current-password"
-                required
-              />
+              <label className="mb-1.5 block text-xs font-semibold text-text-secondary">密码 / Password</label>
+              <div className="relative">
+                <LockKeyhole size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary" />
+                <input type="password" className="input-field !pl-10" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="请输入密码" autoComplete="current-password" required />
+              </div>
             </div>
-            {error && <p className="text-sm text-red-500">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>{loading ? "Signing in..." : "Sign In"}</Button>
+            {error && <p className="rounded-lg border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm text-rose-700">{error}</p>}
+            <Button type="submit" className="w-full gap-2" disabled={loading}>
+              {loading ? "正在登录…" : "进入工作台"} {!loading && <ArrowRight size={16} />}
+            </Button>
           </form>
         </Card>
+        <div className="mt-5 flex items-center justify-between text-[11px] text-text-secondary">
+          <span>2026-2027 SEASON</span>
+          <span className="flex items-center gap-1.5"><i className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> SYSTEM ONLINE</span>
+        </div>
       </div>
     </div>
   );
