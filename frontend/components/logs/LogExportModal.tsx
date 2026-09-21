@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { Button } from "@/components/ui";
 import type { DailyLog } from "@/types/log";
@@ -23,11 +24,16 @@ export function LogExportModal({ open, onClose, log, meta }: Props) {
 
   useEffect(() => {
     if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [open, onClose]);
 
   const handleCopy = useCallback(async () => {
@@ -51,9 +57,9 @@ export function LogExportModal({ open, onClose, log, meta }: Props) {
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="log-export-title"
@@ -65,7 +71,7 @@ export function LogExportModal({ open, onClose, log, meta }: Props) {
         aria-label="Close"
       />
 
-      <div className="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl">
+      <div className="relative z-10 flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)]">
         <div className="border-b border-border bg-gradient-to-r from-primary-light/80 via-white to-purple-50 px-6 py-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -113,7 +119,8 @@ export function LogExportModal({ open, onClose, log, meta }: Props) {
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
