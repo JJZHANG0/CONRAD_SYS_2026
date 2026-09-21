@@ -6,7 +6,6 @@ from django.db import transaction
 
 from apps.teams.models import Team, TeamMember
 from apps.teams.services import (
-    create_daily_logs_for_member,
     create_innovation_brief,
     create_lean_canvas,
 )
@@ -255,7 +254,6 @@ class Command(BaseCommand):
                     f"{membership.student_role}, expected {item['student_role']}"
                 )
             members_created += int(member_created)
-            create_daily_logs_for_member(team, student)
             self.stdout.write(
                 f"{'Created' if created else 'Kept'} student: "
                 f"{student.display_name}; "

@@ -4,7 +4,6 @@ from django.test import TestCase
 
 from apps.bmc.models import LeanCanvas
 from apps.briefs.models import InnovationBrief
-from apps.logs.models import DailyLog
 from apps.teams.models import Team, TeamMember
 
 
@@ -29,7 +28,10 @@ class AddNewRosterCommandTests(TestCase):
         self.assertEqual(TeamMember.objects.count(), 8)
         self.assertEqual(LeanCanvas.objects.count(), 3)
         self.assertEqual(InnovationBrief.objects.count(), 3)
-        self.assertEqual(DailyLog.objects.count(), 40)
+        self.assertEqual(
+            sum(team.daily_logs.count() for team in Team.objects.all()),
+            0,
+        )
 
         cold_team = Team.objects.get(name="TEAM「冷驭」")
         falcon_team = Team.objects.get(name="TEAM「隼卫」")
