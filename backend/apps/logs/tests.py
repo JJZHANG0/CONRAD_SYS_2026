@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework.test import APITestCase
 
-from apps.teams.models import Team
+from apps.teams.models import Team, TeamMember
 
 from .models import DailyLog
 from .serializers import StudentLogUpdateSerializer, TeacherCommentUpdateSerializer
@@ -151,3 +151,63 @@ class DailyLogSaveTests(APITestCase):
         self.assertEqual(
             self.log.teacher_comment, "<p>teacher concurrent save</p>"
         )
+
+
+class OperationsStudentLogAccessTests(APITestCase):
+    def setUp(self):
+        self.teacher = User.objects.create_user(
+            username="teacher-log-access",
+            email="teacher-log-access@example.com",
+            password="test-password",
+            role=User.Role.TEACHER,
+        )
+        self.assigned_operations = User.objects.create_user(
+            username="ops-assigned-log-access",
+            email="ops-assigned-log-access@example.com",
+            password="test-password",
+            role=User.Role.OPERATIONS,
+        )
+        self.other_operations = User.objects.create_user(
+            username="ops-global-log-access",
+            email="ops-global-log-access@example.com",
+            password="test-password",
+            role=User.Role.OPERATIONS,
+        )
+        self.student = User.objects.create_user(
+            username="student-log-access",
+            email="student-log-access@example.com",
+            password="test-password",
+            role=User.Role.STUDENT,
+        )
+        self.team = Team.objects.create(
+            name="Operations Log Access Team",
+            teacher=self.teacher,
+        )
+        self.team.co_teachers.add(self.assigned_operations)
+        TeamMember.objects.create(team=self.team, student=self.student)
+        self.log = DailyLog.objects.create(
+            team=self.team,
+            student=self.student,
+            day=1,
+            work_content="可供所有运营导出的学生日志",
+        )
+        self.url = reverse(
+            "student-logs",
+            args=[self.team.id, self.student.id],
+        )
+
+    def test_assigned_operations_can_read_student_logs_for_export(self):
+        self.client.force_authenticate(self.assigned_operations)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([item["id"] for item in response.data], [self.log.id])
+
+    def test_unassigned_operations_can_read_student_logs_for_export(self):
+        self.client.force_authenticate(self.other_operations)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([item["id"] for item in response.data], [self.log.id])

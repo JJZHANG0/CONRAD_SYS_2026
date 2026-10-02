@@ -67,7 +67,8 @@ function StudentLogsContent() {
 
   const assignedTeacher =
     Boolean(team.viewer_is_team_teacher) || isAssignedTeamTeacher(user, team);
-  // Assigned co-teachers (including operations) get teacher editing; other ops stay read-only.
+  // Assigned operations users keep teacher-comment editing while export remains
+  // available to every operations account through exportMeta.
   const logMode =
     user?.role === "operations" && !assignedTeacher ? "operations" : "teacher";
 
@@ -80,8 +81,10 @@ function StudentLogsContent() {
       backLabel="Back to Team"
       pageTitle={`${studentName}'s Daily Logs`}
       pageSubtitle={
-        logMode === "operations"
-          ? `${team.name} · 只读浏览 · 可导出当日 Log 文本`
+        user?.role === "operations"
+          ? assignedTeacher
+            ? `${team.name} · 查看日志并填写评语 · 可导出当日 Log 文本`
+            : `${team.name} · 只读浏览 · 可导出当日 Log 文本`
           : `${team.name} · Review and add teacher comments · 查看日志并填写评语`
       }
       exportMeta={

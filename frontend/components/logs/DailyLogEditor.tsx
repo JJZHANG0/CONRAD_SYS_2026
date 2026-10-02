@@ -316,7 +316,7 @@ export function DailyLogEditor({
                 只读浏览
               </span>
             )}
-            {isReadOnly && exportMeta && (
+            {exportMeta && (
               <LogExportButton
                 log={log}
                 meta={{
@@ -407,7 +407,7 @@ export function DailyLogEditor({
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {isReadOnly && exportMeta && (
+                {exportMeta && (
                   <LogExportButton
                     log={log}
                     meta={{
