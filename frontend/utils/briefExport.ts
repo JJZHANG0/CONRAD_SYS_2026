@@ -14,6 +14,7 @@ import {
 import { saveAs } from "file-saver";
 import { BRIEF_QUESTIONS, type InnovationBrief } from "@/types/brief";
 import { isRichTextEmpty, stripHtml } from "@/utils/richText";
+import { createPagedDocumentPdf } from "@/utils/pagedDocumentPdf";
 
 export interface BriefExportMeta {
   teamName: string;
@@ -400,35 +401,16 @@ async function canvasToPdfBlob(canvas: HTMLCanvasElement): Promise<Blob> {
 }
 
 export async function createBriefPdfBlob(brief: InnovationBrief, meta: BriefExportMeta): Promise<Blob> {
-  const html = buildExportHtml(brief, meta, true);
-  const { root, cleanup } = mountPdfFrame(html);
-
-  try {
-    await waitForLayout();
-    await new Promise((r) => setTimeout(r, 120));
-
-    const html2canvas = (await import("html2canvas")).default;
-    const scale = root.scrollHeight > 10000 ? 1 : root.scrollHeight > 6000 ? 1.25 : 1.5;
-
-    const canvas = await html2canvas(root, {
-      scale,
-      useCORS: true,
-      logging: false,
-      backgroundColor: "#ffffff",
-      width: 794,
-      windowWidth: 794,
-      scrollX: 0,
-      scrollY: 0,
-    });
-
-    if (!canvas.width || !canvas.height) {
-      throw new Error("PDF 画布生成失败");
-    }
-
-    return await canvasToPdfBlob(canvas);
-  } finally {
-    cleanup();
-  }
+  return createPagedDocumentPdf(
+    BRIEF_QUESTIONS.map((question) => ({
+      number: question.q,
+      titleEn: question.titleEn,
+      titleZh: question.titleZh,
+      answer: String(brief[question.id] || ""),
+    })),
+    meta,
+    "brief",
+  );
 }
 
 export async function exportBriefPdf(brief: InnovationBrief, meta: BriefExportMeta): Promise<void> {

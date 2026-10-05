@@ -14,6 +14,7 @@ import {
 import { saveAs } from "file-saver";
 import { BMC_QUESTIONS, type LeanCanvas } from "@/types/bmc";
 import { isRichTextEmpty, stripHtml } from "@/utils/richText";
+import { createPagedDocumentPdf } from "@/utils/pagedDocumentPdf";
 
 export interface BmcExportMeta {
   teamName: string;
@@ -401,35 +402,16 @@ async function canvasToPdfBlob(canvasEl: HTMLCanvasElement): Promise<Blob> {
 }
 
 export async function createBmcPdfBlob(canvas: LeanCanvas, meta: BmcExportMeta): Promise<Blob> {
-  const html = buildExportHtml(canvas, meta, true);
-  const { root, cleanup } = mountPdfFrame(html);
-
-  try {
-    await waitForLayout();
-    await new Promise((r) => setTimeout(r, 120));
-
-    const html2canvas = (await import("html2canvas")).default;
-    const scale = root.scrollHeight > 10000 ? 1 : root.scrollHeight > 6000 ? 1.25 : 1.5;
-
-    const rendered = await html2canvas(root, {
-      scale,
-      useCORS: true,
-      logging: false,
-      backgroundColor: "#ffffff",
-      width: 794,
-      windowWidth: 794,
-      scrollX: 0,
-      scrollY: 0,
-    });
-
-    if (!rendered.width || !rendered.height) {
-      throw new Error("PDF 画布生成失败");
-    }
-
-    return await canvasToPdfBlob(rendered);
-  } finally {
-    cleanup();
-  }
+  return createPagedDocumentPdf(
+    BMC_QUESTIONS.map((question) => ({
+      number: question.q,
+      titleEn: question.titleEn,
+      titleZh: question.titleZh,
+      answer: String(canvas[question.id] || ""),
+    })),
+    meta,
+    "bmc",
+  );
 }
 
 export async function exportBmcPdf(canvas: LeanCanvas, meta: BmcExportMeta): Promise<void> {
