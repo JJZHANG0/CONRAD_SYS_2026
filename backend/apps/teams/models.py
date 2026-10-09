@@ -23,6 +23,8 @@ class Team(models.Model):
     description = models.TextField(blank=True)
     product_website_url = models.URLField(max_length=500, blank=True)
     product_video_url = models.URLField(max_length=500, blank=True)
+    bmc_locked = models.BooleanField(default=False)
+    innovation_brief_locked = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

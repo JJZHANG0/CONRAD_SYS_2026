@@ -78,6 +78,12 @@ export function StudentDashboardView({ data }: { data: StudentDashboard }) {
                 <h2 className="text-xl font-semibold">{team.name}</h2>
                 <p className="text-sm text-text-secondary">{team.project_name} · {team.challenge_category}</p>
                 <p className="mt-1 text-sm">Teacher: <span className="font-medium text-primary">{team.teacher_name}</span></p>
+                {(team.bmc_locked || team.innovation_brief_locked) && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {team.bmc_locked && <span className="rounded-md bg-slate-900 px-2 py-1 text-[10px] font-semibold text-white">BMC 已定稿 🔒</span>}
+                    {team.innovation_brief_locked && <span className="rounded-md bg-slate-900 px-2 py-1 text-[10px] font-semibold text-white">IB 已定稿 🔒</span>}
+                  </div>
+                )}
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   <TeamProductLink kind="website" url={team.product_website_url} compact />
                   <TeamProductLink kind="video" url={team.product_video_url} compact />
@@ -130,6 +136,12 @@ export function TeamCard({ team }: { team: TeamSummary & TeamStats }) {
             <p className="mt-0.5 truncate text-sm text-text-secondary">{team.project_name}</p>
             {team.teacher_name && (
               <p className="mt-3 truncate text-xs text-text-secondary">导师 · {team.teacher_name}</p>
+            )}
+            {(team.bmc_locked || team.innovation_brief_locked) && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {team.bmc_locked && <span className="rounded-md bg-slate-900 px-2 py-1 text-[10px] font-semibold text-white">BMC 已定稿 🔒</span>}
+                {team.innovation_brief_locked && <span className="rounded-md bg-slate-900 px-2 py-1 text-[10px] font-semibold text-white">IB 已定稿 🔒</span>}
+              </div>
             )}
           </div>
           <span className="team-category-action absolute -right-0.5 top-0 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border bg-white/70 transition-colors">

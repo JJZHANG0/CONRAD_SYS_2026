@@ -11,6 +11,7 @@ from .views import (
     TeacherEvaluationListView,
     TeacherEvaluationUpdateView,
     TeamDetailView,
+    TeamContentLocksView,
     TeamListView,
     TeamProductLinksView,
 )
@@ -22,6 +23,11 @@ urlpatterns = [
         "teams/<int:team_id>/product-links/",
         TeamProductLinksView.as_view(),
         name="team-product-links",
+    ),
+    path(
+        "teams/<int:team_id>/content-locks/",
+        TeamContentLocksView.as_view(),
+        name="team-content-locks",
     ),
     path(
         "teams/<int:team_id>/teacher-evaluations/",

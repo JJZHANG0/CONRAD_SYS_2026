@@ -10,6 +10,7 @@ from apps.teams.models import Team, TeacherDailyEvaluation, TeamMember
 
 from .permissions import user_can_access_team, user_is_team_teacher
 from .serializers import (
+    TeamContentLocksSerializer,
     TeamProductLinksSerializer,
     TeacherDailyEvaluationSerializer,
     TeamDetailSerializer,
@@ -86,6 +87,8 @@ class DashboardView(APIView):
                     "challenge_category": team.challenge_category,
                     "product_website_url": team.product_website_url,
                     "product_video_url": team.product_video_url,
+                    "bmc_locked": team.bmc_locked,
+                    "innovation_brief_locked": team.innovation_brief_locked,
                     "teacher_name": team.teacher_names_text(),
                     **stats,
                 })
@@ -107,6 +110,8 @@ class DashboardView(APIView):
                     "challenge_category": team.challenge_category,
                     "product_website_url": team.product_website_url,
                     "product_video_url": team.product_video_url,
+                    "bmc_locked": team.bmc_locked,
+                    "innovation_brief_locked": team.innovation_brief_locked,
                     "teacher_name": team.teacher_names_text(),
                     **stats,
                 })
@@ -140,6 +145,8 @@ class DashboardView(APIView):
                 "challenge_category": team.challenge_category,
                 "product_website_url": team.product_website_url,
                 "product_video_url": team.product_video_url,
+                "bmc_locked": team.bmc_locked,
+                "innovation_brief_locked": team.innovation_brief_locked,
                 "teacher_name": team.teacher_names_text(),
                 "my_log_completion": stats["log_completion_count"],
                 "teacher_comment_count": stats["teacher_comment_count"],
@@ -187,6 +194,30 @@ class TeamProductLinksView(APIView):
             return Response(TeamProductLinksSerializer(saved).data)
 
         return handle_form_database_errors(save_links)
+
+
+class TeamContentLocksView(APIView):
+    def patch(self, request, team_id):
+        if not request.user.is_operations:
+            return Response(
+                {"detail": "Only operations accounts can finalize team documents."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        team = get_object_or_404(Team, pk=team_id)
+
+        def save_locks():
+            serializer = TeamContentLocksSerializer(
+                team,
+                data=request.data,
+                partial=True,
+            )
+            serializer.is_valid(raise_exception=True)
+            saved = run_with_db_retry(serializer.save)
+            saved.refresh_from_db()
+            return Response(TeamContentLocksSerializer(saved).data)
+
+        return handle_form_database_errors(save_locks)
 
 
 class TeacherEvaluationListView(APIView):

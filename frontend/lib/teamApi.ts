@@ -1,6 +1,7 @@
 import { apiClient, patchWithRetry } from "./apiClient";
 import type {
   TeamDetail,
+  TeamContentLocks,
   TeamProductLinks,
   TeamSummary,
   TeacherDailyEvaluation,
@@ -45,6 +46,16 @@ export async function updateTeamProductLinks(
 ): Promise<TeamProductLinks> {
   return patchWithRetry<TeamProductLinks>(
     `/teams/${teamId}/product-links/`,
+    payload
+  );
+}
+
+export async function updateTeamContentLocks(
+  teamId: number,
+  payload: Partial<Pick<TeamContentLocks, "bmc_locked" | "innovation_brief_locked">>
+): Promise<TeamContentLocks> {
+  return patchWithRetry<TeamContentLocks>(
+    `/teams/${teamId}/content-locks/`,
     payload
   );
 }

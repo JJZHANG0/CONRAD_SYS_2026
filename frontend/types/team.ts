@@ -44,6 +44,8 @@ export interface TeamSummary {
   challenge_category: string;
   product_website_url: string;
   product_video_url: string;
+  bmc_locked: boolean;
+  innovation_brief_locked: boolean;
   teacher_name?: string;
   co_teacher_names?: string[];
   stats?: TeamStats;
@@ -83,6 +85,8 @@ export interface StudentTeamDashboard {
   challenge_category: string;
   product_website_url: string;
   product_video_url: string;
+  bmc_locked: boolean;
+  innovation_brief_locked: boolean;
   teacher_name: string;
   my_log_completion: number;
   teacher_comment_count: number;
@@ -93,6 +97,12 @@ export interface StudentTeamDashboard {
 export interface TeamProductLinks {
   product_website_url: string;
   product_video_url: string;
+  updated_at?: string;
+}
+
+export interface TeamContentLocks {
+  bmc_locked: boolean;
+  innovation_brief_locked: boolean;
   updated_at?: string;
 }
 

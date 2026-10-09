@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Card, TextArea, SaveIndicator, Button, ProgressBar } from "@/components/ui";
 import { BmcExportButtons } from "@/components/bmc/BmcExportButtons";
 import { ModuleOpsTools, reviewCardClass } from "@/components/forms/ModuleOpsTools";
+import { DocumentLockControl } from "@/components/forms/DocumentLockControl";
 import { BMC_QUESTIONS, type LeanCanvas } from "@/types/bmc";
 import type { BmcExportMeta } from "@/utils/bmcExport";
 import type { SaveStatus } from "@/types/log";
@@ -27,6 +28,7 @@ export function LeanCanvasForm({
   canExport,
   canTranslate,
   canReview,
+  canManageLock,
   exportMeta,
   onUpdated,
   backHref,
@@ -40,6 +42,7 @@ export function LeanCanvasForm({
   canExport?: boolean;
   canTranslate?: boolean;
   canReview?: boolean;
+  canManageLock?: boolean;
   exportMeta?: BmcExportMeta;
   onUpdated: (c: LeanCanvas) => void;
   backHref?: string;
@@ -162,6 +165,11 @@ export function LeanCanvasForm({
             </p>
           </div>
           <div className="text-right">
+            {data.is_locked && (
+              <span className="mb-2 inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
+                BMC 已定稿 🔒
+              </span>
+            )}
             {!canEdit && (
               <span className="mb-2 inline-block rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
                 只读浏览
@@ -187,6 +195,21 @@ export function LeanCanvasForm({
           </div>
         </div>
       </Card>
+
+      {canManageLock && (
+        <div className="mb-6">
+          <DocumentLockControl
+            teamId={canvas.team}
+            kind="bmc"
+            locked={data.is_locked}
+            onChanged={(locked) => {
+              const updated = { ...dataRef.current, is_locked: locked };
+              setData(updated);
+              onUpdated(updated);
+            }}
+          />
+        </div>
+      )}
 
       {canExport && exportMeta && (
         <div className="mb-6">

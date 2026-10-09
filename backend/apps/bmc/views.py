@@ -48,6 +48,12 @@ class LeanCanvasView(APIView):
         if not team:
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
 
+        if team.bmc_locked:
+            return Response(
+                {"detail": "BMC 已定稿，运营老师解锁后才能修改。"},
+                status=status.HTTP_423_LOCKED,
+            )
+
         user = request.user
         can_edit = user_is_team_teacher(user, team) or (
             STUDENTS_CAN_EDIT_BMC and user_is_team_member(user, team)
@@ -72,6 +78,11 @@ class LeanCanvasReviewView(APIView):
         team = get_object_or_404(Team, pk=team_id)
         if not user_can_access_team(request.user, team) or not user_is_operations(request.user):
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+        if team.bmc_locked:
+            return Response(
+                {"detail": "BMC 已定稿，解锁后才能修改评审状态。"},
+                status=status.HTTP_423_LOCKED,
+            )
 
         field = request.data.get("field")
         review_status = request.data.get("status")

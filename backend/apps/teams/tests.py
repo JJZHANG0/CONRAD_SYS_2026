@@ -3,6 +3,8 @@ from django.urls import reverse
 from rest_framework.test import APITestCase
 
 from apps.logs.models import DailyLog
+from apps.bmc.models import LeanCanvas
+from apps.briefs.models import InnovationBrief
 
 from .models import Team, TeacherDailyEvaluation, TeamMember
 
@@ -322,3 +324,110 @@ class TeamProductLinksTests(APITestCase):
         self.assertEqual(dashboard.data["teams"][0]["product_video_url"], "https://example.com/video")
         self.assertEqual(detail.data["product_website_url"], "https://example.com/product")
         self.assertEqual(detail.data["product_video_url"], "https://example.com/video")
+
+
+class TeamContentLocksTests(APITestCase):
+    def setUp(self):
+        self.operations = User.objects.create_user(
+            username="ops-locks",
+            email="ops-locks@example.com",
+            password="test-password",
+            role=User.Role.OPERATIONS,
+        )
+        self.teacher = User.objects.create_user(
+            username="teacher-locks",
+            email="teacher-locks@example.com",
+            password="test-password",
+            role=User.Role.TEACHER,
+        )
+        self.student = User.objects.create_user(
+            username="student-locks",
+            email="student-locks@example.com",
+            password="test-password",
+            role=User.Role.STUDENT,
+        )
+        self.team = Team.objects.create(name="Finalized Team", teacher=self.teacher)
+        TeamMember.objects.create(team=self.team, student=self.student)
+        self.canvas = LeanCanvas.objects.create(team=self.team, problem="原 BMC 内容")
+        self.brief = InnovationBrief.objects.create(team=self.team, opportunity="原 IB 内容")
+        self.lock_url = reverse("team-content-locks", args=[self.team.id])
+        self.bmc_url = reverse("lean-canvas", args=[self.team.id])
+        self.brief_url = reverse("innovation-brief", args=[self.team.id])
+
+    def test_only_operations_can_change_content_locks(self):
+        self.client.force_authenticate(self.teacher)
+        denied = self.client.patch(
+            self.lock_url,
+            {"bmc_locked": True},
+            format="json",
+        )
+        self.assertEqual(denied.status_code, 403)
+
+        self.client.force_authenticate(self.operations)
+        response = self.client.patch(
+            self.lock_url,
+            {"bmc_locked": True, "innovation_brief_locked": True},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.team.refresh_from_db()
+        self.assertTrue(self.team.bmc_locked)
+        self.assertTrue(self.team.innovation_brief_locked)
+
+    def test_locked_documents_reject_teacher_and_student_edits(self):
+        self.team.bmc_locked = True
+        self.team.innovation_brief_locked = True
+        self.team.save(update_fields=["bmc_locked", "innovation_brief_locked"])
+
+        self.client.force_authenticate(self.teacher)
+        bmc_response = self.client.patch(
+            self.bmc_url,
+            {"problem": "不应保存"},
+            format="json",
+        )
+        self.client.force_authenticate(self.student)
+        brief_response = self.client.patch(
+            self.brief_url,
+            {"opportunity": "不应保存"},
+            format="json",
+        )
+
+        self.assertEqual(bmc_response.status_code, 423)
+        self.assertEqual(brief_response.status_code, 423)
+        self.canvas.refresh_from_db()
+        self.brief.refresh_from_db()
+        self.assertEqual(self.canvas.problem, "原 BMC 内容")
+        self.assertEqual(self.brief.opportunity, "原 IB 内容")
+
+    def test_lock_state_is_visible_in_documents_dashboard_and_detail(self):
+        self.team.bmc_locked = True
+        self.team.innovation_brief_locked = True
+        self.team.save(update_fields=["bmc_locked", "innovation_brief_locked"])
+        self.client.force_authenticate(self.operations)
+
+        bmc = self.client.get(self.bmc_url)
+        brief = self.client.get(self.brief_url)
+        dashboard = self.client.get(reverse("dashboard"))
+        detail = self.client.get(reverse("team-detail", args=[self.team.id]))
+
+        self.assertTrue(bmc.data["is_locked"])
+        self.assertTrue(brief.data["is_locked"])
+        self.assertTrue(dashboard.data["teams"][0]["bmc_locked"])
+        self.assertTrue(dashboard.data["teams"][0]["innovation_brief_locked"])
+        self.assertTrue(detail.data["bmc_locked"])
+        self.assertTrue(detail.data["innovation_brief_locked"])
+
+    def test_operations_can_unlock_documents(self):
+        self.team.bmc_locked = True
+        self.team.save(update_fields=["bmc_locked"])
+        self.client.force_authenticate(self.operations)
+
+        response = self.client.patch(
+            self.lock_url,
+            {"bmc_locked": False},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.team.refresh_from_db()
+        self.assertFalse(self.team.bmc_locked)

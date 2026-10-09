@@ -92,6 +92,8 @@ class TeamListSerializer(serializers.ModelSerializer):
             "challenge_category",
             "product_website_url",
             "product_video_url",
+            "bmc_locked",
+            "innovation_brief_locked",
             "teacher_name",
             "co_teacher_names",
             "stats",
@@ -132,6 +134,8 @@ class TeamDetailSerializer(serializers.ModelSerializer):
             "description",
             "product_website_url",
             "product_video_url",
+            "bmc_locked",
+            "innovation_brief_locked",
             "teacher",
             "co_teachers",
             "teacher_name",
@@ -170,4 +174,11 @@ class TeamProductLinksSerializer(serializers.ModelSerializer):
     class Meta:
         model = Team
         fields = ("product_website_url", "product_video_url", "updated_at")
+        read_only_fields = ("updated_at",)
+
+
+class TeamContentLocksSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Team
+        fields = ("bmc_locked", "innovation_brief_locked", "updated_at")
         read_only_fields = ("updated_at",)

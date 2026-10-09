@@ -16,6 +16,7 @@ export interface LeanCanvas {
   cost_structure: string;
   revenue_streams: string;
   field_reviews?: FieldReviewsMap;
+  is_locked: boolean;
   completion_count: number;
   completion_rate: number;
   updated_at: string;
@@ -24,7 +25,7 @@ export interface LeanCanvas {
 export interface BmcQuestionDef {
   id: keyof Omit<
     LeanCanvas,
-    "id" | "team" | "field_reviews" | "completion_count" | "completion_rate" | "updated_at"
+    "id" | "team" | "field_reviews" | "is_locked" | "completion_count" | "completion_rate" | "updated_at"
   >;
   q: number;
   titleEn: string;

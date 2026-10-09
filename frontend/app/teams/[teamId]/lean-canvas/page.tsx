@@ -78,12 +78,14 @@ function LeanCanvasContent() {
   const assignedTeacher =
     Boolean(team.viewer_is_team_teacher) || isAssignedTeamTeacher(user, team);
   const canEdit =
-    user?.role === "teacher" ||
-    user?.role === "student" ||
-    assignedTeacher;
+    !canvas.is_locked && (
+      user?.role === "teacher" ||
+      user?.role === "student" ||
+      assignedTeacher
+    );
   const canExport = user?.role === "operations";
   const canTranslate = user?.role === "teacher" || user?.role === "operations";
-  const canReview = user?.role === "operations";
+  const canReview = user?.role === "operations" && !canvas.is_locked;
 
   return (
     <LeanCanvasForm
@@ -94,6 +96,7 @@ function LeanCanvasContent() {
       canExport={canExport}
       canTranslate={canTranslate}
       canReview={canReview}
+      canManageLock={user?.role === "operations"}
       exportMeta={{
         teamName: team.name,
         projectName: team.project_name,

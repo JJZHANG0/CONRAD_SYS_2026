@@ -14,6 +14,7 @@ export interface InnovationBrief {
   business_model: string;
   fundraising: string;
   field_reviews?: FieldReviewsMap;
+  is_locked: boolean;
   completion_count: number;
   completion_rate: number;
   updated_at: string;
@@ -22,7 +23,7 @@ export interface InnovationBrief {
 export interface BriefQuestionDef {
   id: keyof Omit<
     InnovationBrief,
-    "id" | "team" | "field_reviews" | "completion_count" | "completion_rate" | "updated_at"
+    "id" | "team" | "field_reviews" | "is_locked" | "completion_count" | "completion_rate" | "updated_at"
   >;
   q: number;
   titleEn: string;

@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { Card, TextArea, SaveIndicator, Button, ProgressBar } from "@/components/ui";
 import { BriefExportButtons } from "@/components/brief/BriefExportButtons";
 import { ModuleOpsTools, reviewCardClass } from "@/components/forms/ModuleOpsTools";
+import { DocumentLockControl } from "@/components/forms/DocumentLockControl";
 import { BRIEF_QUESTIONS, BRIEF_TOTAL_WORD_LIMIT, type InnovationBrief } from "@/types/brief";
 import type { BriefExportMeta } from "@/utils/briefExport";
 import type { SaveStatus } from "@/types/log";
@@ -19,9 +20,9 @@ import { isOverWordLimit, wordCount } from "@/utils/completion";
 import { buildTextFormPayload } from "@/utils/formPayload";
 import { isRichTextEmpty, sanitizeRichTextHtml } from "@/utils/richText";
 
-export function InnovationBriefForm({ brief, teamName, projectName, canEdit, canExport, canTranslate, canReview, exportMeta, onUpdated, backHref, backLabel, saveRedirectHref = "/dashboard" }: {
+export function InnovationBriefForm({ brief, teamName, projectName, canEdit, canExport, canTranslate, canReview, canManageLock, exportMeta, onUpdated, backHref, backLabel, saveRedirectHref = "/dashboard" }: {
   brief: InnovationBrief; teamName: string; projectName: string;
-  canEdit: boolean; canExport?: boolean; canTranslate?: boolean; canReview?: boolean; exportMeta?: BriefExportMeta;
+  canEdit: boolean; canExport?: boolean; canTranslate?: boolean; canReview?: boolean; canManageLock?: boolean; exportMeta?: BriefExportMeta;
   onUpdated: (b: InnovationBrief) => void;
   backHref?: string; backLabel?: string;
   saveRedirectHref?: string;
@@ -146,6 +147,11 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
             </p>
           </div>
           <div className="text-right">
+            {data.is_locked && (
+              <span className="mb-2 inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
+                IB 已定稿 🔒
+              </span>
+            )}
             {!canEdit && (
               <span className="mb-2 inline-block rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
                 只读浏览
@@ -174,6 +180,21 @@ export function InnovationBriefForm({ brief, teamName, projectName, canEdit, can
           </div>
         </div>
       </Card>
+
+      {canManageLock && (
+        <div className="mb-6">
+          <DocumentLockControl
+            teamId={brief.team}
+            kind="brief"
+            locked={data.is_locked}
+            onChanged={(locked) => {
+              const updated = { ...dataRef.current, is_locked: locked };
+              setData(updated);
+              onUpdated(updated);
+            }}
+          />
+        </div>
+      )}
 
       {canExport && exportMeta && (
         <div className="mb-6">

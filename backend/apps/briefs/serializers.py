@@ -10,6 +10,7 @@ from .models import BRIEF_FIELDS, InnovationBrief
 class InnovationBriefSerializer(serializers.ModelSerializer):
     completion_count = serializers.SerializerMethodField()
     completion_rate = serializers.SerializerMethodField()
+    is_locked = serializers.BooleanField(source="team.innovation_brief_locked", read_only=True)
 
     class Meta:
         model = InnovationBrief
@@ -17,10 +18,11 @@ class InnovationBriefSerializer(serializers.ModelSerializer):
             "id", "team",
             *BRIEF_FIELDS,
             "field_reviews",
+            "is_locked",
             "completion_count", "completion_rate",
             "created_at", "updated_at",
         )
-        read_only_fields = ("id", "team", "field_reviews", "created_at", "updated_at")
+        read_only_fields = ("id", "team", "field_reviews", "is_locked", "created_at", "updated_at")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
