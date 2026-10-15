@@ -22,7 +22,9 @@ function escapeHtml(text: string): string {
 }
 
 function plain(value: string): string {
-  return escapeHtml(stripHtml(value) || "（暂无内容）");
+  const text = stripHtml(value);
+  if (!text) return "（暂无内容）";
+  return escapeHtml(text).replace(/\n/g, "<br>");
 }
 
 function formatDate(): string {

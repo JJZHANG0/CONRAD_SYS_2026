@@ -19,7 +19,6 @@ from .text import sanitize_rich_text_html
 logger = logging.getLogger(__name__)
 
 _TAG_RE = re.compile(r"<[^>]+>")
-_WS_RE = re.compile(r"\s+")
 
 # Per-provider chunk limits (chars)
 _CHUNK_GOOGLE = 1800
@@ -33,7 +32,10 @@ def _request_timeout() -> int:
 
 def plain_text_from_html(value: str) -> str:
     cleaned = sanitize_rich_text_html(value or "")
-    text = _TAG_RE.sub(" ", cleaned)
+    text = re.sub(r"<p><br></p>", "\n", cleaned, flags=re.IGNORECASE)
+    text = re.sub(r"</p>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    text = _TAG_RE.sub("", text)
     text = (
         text.replace("&nbsp;", " ")
         .replace("&amp;", "&")
@@ -41,7 +43,10 @@ def plain_text_from_html(value: str) -> str:
         .replace("&gt;", ">")
         .replace("&quot;", '"')
     )
-    return _WS_RE.sub(" ", text).strip()
+    text = re.sub(r"[^\S\n]+", " ", text)
+    text = re.sub(r" *\n *", "\n", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 
 
 def _chunk_text(text: str, size: int) -> list[str]:

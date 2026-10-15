@@ -63,6 +63,35 @@ class PartialFormUpdateTests(TestCase):
         self.assertEqual(brief.opportunity, "<p>opportunity update</p>")
         self.assertEqual(brief.market, "<p>market update</p>")
 
+    def test_brief_save_keeps_line_and_paragraph_breaks(self):
+        from apps.common.text import sanitize_rich_text_html
+
+        raw = "<div>First line</div><div><br></div><div>Second paragraph</div>"
+        expected = "<p>First line</p><p><br></p><p>Second paragraph</p>"
+        self.assertEqual(sanitize_rich_text_html(raw), expected)
+        self.assertEqual(sanitize_rich_text_html(expected), expected)
+        self.assertEqual(
+            sanitize_rich_text_html("<p>line1<br>line2</p>"),
+            "<p>line1</p><p>line2</p>",
+        )
+        self.assertEqual(
+            sanitize_rich_text_html("<p>a <script>alert(1)</script> b</p>"),
+            "<p>a b</p>",
+        )
+        self.assertEqual(
+            sanitize_rich_text_html("a < b & c"),
+            "<p>a &lt; b &amp; c</p>",
+        )
+
+        brief = InnovationBrief.objects.create(team=self.team)
+        saved = InnovationBriefSerializer(
+            brief, data={"opportunity": raw}, partial=True
+        )
+        saved.is_valid(raise_exception=True)
+        saved.save()
+        brief.refresh_from_db()
+        self.assertEqual(brief.opportunity, expected)
+
 
 class HealthCheckTests(TestCase):
     def test_health_check_probes_database(self):
