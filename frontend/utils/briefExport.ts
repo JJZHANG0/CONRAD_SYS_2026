@@ -197,7 +197,7 @@ function buildExportHtml(brief: InnovationBrief, meta: BriefExportMeta, pdfSafe 
         min-height: 48px;
       }
       .answer.empty, .empty { color: #94a3b8; font-style: italic; }
-      .rich-content p { margin: 0 0 8px; }
+      .rich-content p { margin: 0; min-height: 1.65em; }
       .rich-content ul, .rich-content ol { margin: 8px 0; padding-left: 1.4em; }
       .rich-content li { margin: 4px 0; }
       .rich-content strong { font-weight: 600; }

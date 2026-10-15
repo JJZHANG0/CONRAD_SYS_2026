@@ -79,6 +79,11 @@ export function RichTextEditor({
   useLayoutEffect(() => {
     const el = editorRef.current;
     if (!el || disabled) return;
+    try {
+      document.execCommand("defaultParagraphSeparator", false, "p");
+    } catch {
+      // Older browsers ignore the paragraph separator command.
+    }
     el.innerHTML = sanitizeRichTextHtml(value || "");
     setCount(useWords ? countWords(value) : getPlainTextLength(value));
     // value intentionally omitted — remount via key when external content changes
@@ -205,8 +210,15 @@ export function RichTextEditor({
           onInput={() => notifyChange(false)}
           onPaste={(e) => {
             e.preventDefault();
-            const text = e.clipboardData.getData("text/plain");
-            document.execCommand("insertText", false, text);
+            const text = e.clipboardData
+              .getData("text/plain")
+              .replace(/\r\n/g, "\n")
+              .replace(/\r/g, "\n");
+            const lines = text.split("\n");
+            lines.forEach((line, index) => {
+              if (index > 0) document.execCommand("insertParagraph");
+              if (line) document.execCommand("insertText", false, line);
+            });
             notifyChange(true);
           }}
           onBlur={() => {
